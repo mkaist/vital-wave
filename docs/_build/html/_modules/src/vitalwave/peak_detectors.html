@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>src.vitalwave.peak_detectors &mdash; Vital Wave  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/plot_directive.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Vital Wave
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">Vital Wave Library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../main_content.html">Healthcare Variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../main_content.html#vital-wave-measuring-the-heart">Vital Wave - measuring the heart</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Vital Wave</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">src.vitalwave.peak_detectors</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for src.vitalwave.peak_detectors</h1><div class="highlight"><pre>
+<span></span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">vitalwave</span> <span class="kn">import</span> <span class="n">basic_algos</span>
+<span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="kn">import</span> <span class="n">find_peaks</span><span class="p">,</span> <span class="n">detrend</span><span class="p">,</span> <span class="n">windows</span>
+
+<span class="kn">import</span> <span class="nn">copy</span>
+
+
+<div class="viewcode-block" id="ampd">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.peak_detectors.ampd">[docs]</a>
+<span class="k">def</span> <span class="nf">ampd</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Automatic multiscale-based peak detection (AMPD).</span>
+
+<span class="sd">    Based on the article: https://doi.org/10.3390/a5040588.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        The data for which the peaks are detected.</span>
+<span class="sd">    fs</span>
+<span class="sd">        Sampling frequency of the data.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    peak_indices</span>
+<span class="sd">        Indices for the found peaks in the signal.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    To find the peaks or valleys in a given signal:</span>
+
+<span class="sd">    .. plot::</span>
+<span class="sd">       :include-source:</span>
+
+<span class="sd">       from vitalwave.example_data import load_biosignal</span>
+<span class="sd">       import matplotlib.pyplot as plt</span>
+
+<span class="sd">       import numpy as np</span>
+
+<span class="sd">       limits = [0,2000]</span>
+<span class="sd">       time, ppg = load_biosignal(type=&quot;PPG&quot;)</span>
+
+<span class="sd">       fs = (1 / np.mean(np.diff(time)))</span>
+
+<span class="sd">       from vitalwave.peak_detectors import ampd</span>
+
+<span class="sd">       # calculate ppg peaks and valleys - ampd (Automated Multi-scale Peak Detection)</span>
+<span class="sd">       start, stop = limits</span>
+
+<span class="sd">       ppg_ampd_peaks = ampd(ppg[start:stop], fs=int(fs))</span>
+
+<span class="sd">       fig, ax = plt.subplots()</span>
+<span class="sd">       fig.set_size_inches(10, 6)</span>
+
+<span class="sd">       ax.plot(time[start:stop], ppg[start:stop])</span>
+<span class="sd">       ax.plot(time[start:stop][ppg_ampd_peaks], ppg[start:stop][ppg_ampd_peaks], &#39;go&#39;)</span>
+
+<span class="sd">       ax.set_xlabel(&#39;Time [s]&#39;)</span>
+<span class="sd">       ax.set_title(&quot;Automatic multiscale-based peak detection (AMDP); for PPG&quot;)</span>
+
+<span class="sd">       fig.tight_layout()</span>
+<span class="sd">       plt.show()</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Linear detrending, i.e. subtract a linear regression line from the signal.</span>
+    <span class="n">arr_detrended</span> <span class="o">=</span> <span class="n">detrend</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Number of samples in the signal.</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="n">arr_detrended</span><span class="o">.</span><span class="n">size</span>
+
+    <span class="c1"># Number of moving windows.</span>
+    <span class="k">if</span> <span class="n">fs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">fs</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="n">N</span> <span class="o">//</span> <span class="mi">2</span>
+
+    <span class="c1"># Local maxima scalogram (LMS) of the signal.</span>
+    <span class="n">M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">L</span><span class="p">,</span> <span class="n">N</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">L</span><span class="p">):</span>
+        <span class="n">M</span><span class="p">[</span><span class="n">k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="n">k</span><span class="p">:</span><span class="n">N</span> <span class="o">-</span> <span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">arr_detrended</span><span class="p">[</span><span class="n">k</span><span class="p">:</span><span class="n">N</span> <span class="o">-</span> <span class="n">k</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">arr_detrended</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">N</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">k</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">arr_detrended</span><span class="p">[</span><span class="n">k</span><span class="p">:</span><span class="n">N</span> <span class="o">-</span> <span class="n">k</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">arr_detrended</span><span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">k</span><span class="p">:</span><span class="n">N</span><span class="p">])</span>
+
+    <span class="c1"># Calculate the gamma vector containing the information about the scale-dependent</span>
+    <span class="c1"># distribution of zeros (and thus local maxima).</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Calculate the global maximum of gamma, lambda, which represents the scale with the most</span>
+    <span class="c1"># local maxima.</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+
+    <span class="c1"># Reshape the LMS matrix by removing all elements for which k &gt; l.</span>
+    <span class="n">M_r</span> <span class="o">=</span> <span class="n">M</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">l</span><span class="p">,</span> <span class="p">:]</span>
+
+    <span class="c1"># Take the minimum of M_r column-wise.</span>
+    <span class="n">M_r_col_mins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">M_r</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># The peak indices are the ones where the M_r_mins are zero.</span>
+    <span class="n">peaks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">M_r_col_mins</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">peaks</span></div>
+
+
+
+<div class="viewcode-block" id="msptd">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.peak_detectors.msptd">[docs]</a>
+<span class="k">def</span> <span class="nf">msptd</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modified automatic multiscale-based peak detection (AMPD).</span>
+
+<span class="sd">    Based on the Matlab implementation presented in the </span>
+<span class="sd">    article: https://doi.org/10.1007/978-3-319-65798-1_39.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        The data for which the peaks and troughs are detected</span>
+<span class="sd">    fs</span>
+<span class="sd">        Sampling frequency of the data.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    peaks</span>
+<span class="sd">        Indices for the found peaks.</span>
+<span class="sd">    troughs</span>
+<span class="sd">        Indices for the found troughs.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    To find the peaks and valleys in a given signal:</span>
+
+<span class="sd">    .. plot::</span>
+<span class="sd">       :include-source:</span>
+
+<span class="sd">       from vitalwave.example_data import load_biosignal</span>
+<span class="sd">       import matplotlib.pyplot as plt</span>
+
+<span class="sd">       import numpy as np</span>
+
+<span class="sd">       limits = [0,2000]</span>
+<span class="sd">       time, ppg = load_biosignal(type=&quot;PPG&quot;)</span>
+
+<span class="sd">       fs = (1 / np.mean(np.diff(time)))</span>
+
+<span class="sd">       from vitalwave.peak_detectors import msptd</span>
+
+<span class="sd">       start, stop = limits</span>
+
+<span class="sd">       # calculate ppg peaks and valleys - msptd (Modified Smoothed Peak Detection)</span>
+<span class="sd">       ppg_msptd_peaks, ppg_msptd_feet = msptd(ppg[start:stop], fs=fs)</span>
+
+<span class="sd">       fig, ax = plt.subplots()</span>
+<span class="sd">       fig.set_size_inches(10, 6)</span>
+
+<span class="sd">       ax.plot(time[:stop], ppg[:stop])</span>
+<span class="sd">       ax.plot(time[:stop][ppg_msptd_peaks], ppg[:stop][ppg_msptd_peaks], &#39;go&#39;)</span>
+<span class="sd">       ax.plot(time[:stop][ppg_msptd_feet], ppg[:stop][ppg_msptd_feet], &#39;ro&#39;)</span>
+
+<span class="sd">       ax.set_xlabel(&#39;Time [s]&#39;)</span>
+<span class="sd">       ax.set_title(&quot;Modified AMDP Peak Detection; for PPG&quot;)</span>
+
+<span class="sd">       fig.tight_layout()</span>
+<span class="sd">       plt.show()</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">fs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">fs</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">N</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span> <span class="o">-</span> <span class="mi">1</span>
+
+    <span class="c1"># Detrend the data.</span>
+    <span class="n">arr_detrended</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span>
+    <span class="n">arr_detrended</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">arr_detrended</span><span class="p">)]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">arr_detrended</span><span class="p">)</span>
+    <span class="n">arr_detrended</span> <span class="o">=</span> <span class="n">detrend</span><span class="p">(</span><span class="n">arr_detrended</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Produce the local maxima and minima scalograms.</span>
+    <span class="n">scalogram_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N</span><span class="p">,</span> <span class="n">L</span><span class="p">))</span>
+    <span class="n">scalogram_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N</span><span class="p">,</span> <span class="n">L</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">L</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="n">j</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">k</span> <span class="o">+</span> <span class="mi">2</span><span class="p">,</span> <span class="n">N</span> <span class="o">-</span> <span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">arr_detrended</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">arr_detrended</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="n">k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="ow">and</span> <span class="n">arr_detrended</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">arr_detrended</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="n">k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]:</span>
+                <span class="n">scalogram_max</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+            
+            <span class="k">if</span> <span class="n">arr_detrended</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">arr_detrended</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="n">k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="ow">and</span> <span class="n">arr_detrended</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">arr_detrended</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="n">k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]:</span>
+                <span class="n">scalogram_min</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="c1"># Form y the column-wise count of where Mx is 0, a scale-dependent </span>
+    <span class="c1"># distribution of local maxima. Find d, the scale with the most maxima </span>
+    <span class="c1"># (== most number of zeros in row). Redimension scalogram_max to contain </span>
+    <span class="c1"># only the first d scales.</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">scalogram_max</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">scalogram_max</span> <span class="o">=</span> <span class="n">scalogram_max</span><span class="p">[:,</span> <span class="p">:</span><span class="n">d</span><span class="p">]</span>
+    <span class="c1"># Do the same for the minima.</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">scalogram_min</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">scalogram_min</span> <span class="o">=</span> <span class="n">scalogram_min</span><span class="p">[:,</span> <span class="p">:</span><span class="n">d</span><span class="p">]</span>
+    
+    <span class="c1"># Form z_max and z_min the row-rise counts of scalogram_max and </span>
+    <span class="c1"># scalogram_min&#39;s non-zero elements. Any row with a zero count contains </span>
+    <span class="c1"># entirley zeros, thus indicating%the presence of a peak or trough.</span>
+    <span class="n">z_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">scalogram_max</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">z_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">scalogram_min</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="c1"># Find all the zeros in z_max and z_min. The indices of the zero counts</span>
+    <span class="c1"># correspond to the position of peaks and troughs respectively.</span>
+    <span class="n">peaks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">z_max</span><span class="o">==</span><span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">troughs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">z_min</span><span class="o">==</span><span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">peaks</span><span class="p">,</span> <span class="n">troughs</span></div>
+
+
+
+<div class="viewcode-block" id="ecg_modified_pan_tompkins">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.peak_detectors.ecg_modified_pan_tompkins">[docs]</a>
+<span class="k">def</span> <span class="nf">ecg_modified_pan_tompkins</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Detects ECG R peaks using the Pan-Tompkins algorithm.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        ECG signal from which the R peaks are detected.</span>
+<span class="sd">    fs</span>
+<span class="sd">        ECG signal sampling frequency.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    r_e</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    To find the r-peaks of ECG in a given signal:</span>
+
+<span class="sd">    .. plot::</span>
+<span class="sd">       :include-source:</span>
+
+<span class="sd">       from vitalwave.example_data import load_biosignal</span>
+<span class="sd">       import matplotlib.pyplot as plt</span>
+
+<span class="sd">       import numpy as np</span>
+
+<span class="sd">       limits = [0,2000]</span>
+<span class="sd">       time, ecg = load_biosignal(type=&quot;ECG&quot;)</span>
+
+<span class="sd">       fs = (1 / np.mean(np.diff(time)))</span>
+
+<span class="sd">       from vitalwave.peak_detectors import ecg_modified_pan_tompkins</span>
+
+<span class="sd">       start, stop = limits</span>
+
+<span class="sd">       ecg_r_peaks = ecg_modified_pan_tompkins(ecg[start:stop], fs=fs)</span>
+
+<span class="sd">       fig, ax = plt.subplots()</span>
+<span class="sd">       fig.set_size_inches(10, 6)</span>
+
+<span class="sd">       ax.plot(time[:stop], ecg[:stop])</span>
+<span class="sd">       ax.plot(time[:stop][ecg_r_peaks], ecg[:stop][ecg_r_peaks], &#39;go&#39;)</span>
+
+<span class="sd">       ax.set_xlabel(&#39;Time [s]&#39;)</span>
+<span class="sd">       ax.set_title(&quot;ECG r-peaks using Pan Tompkins&quot;)</span>
+
+<span class="sd">       fig.tight_layout()</span>
+<span class="sd">       plt.show()</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Bandpass filtering.</span>
+    <span class="n">s_filt</span> <span class="o">=</span> <span class="n">basic_algos</span><span class="o">.</span><span class="n">butter_filter</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">15</span><span class="p">],</span> <span class="s1">&#39;bandpass&#39;</span><span class="p">,</span> <span class="n">fs</span><span class="p">)</span>
+
+    <span class="c1"># Derivative.</span>
+    <span class="n">s_der</span> <span class="o">=</span> <span class="n">basic_algos</span><span class="o">.</span><span class="n">derivative_filter</span><span class="p">(</span><span class="n">arr</span><span class="o">=</span><span class="n">s_filt</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">)</span>
+
+    <span class="c1"># Squaring.</span>
+    <span class="n">s_sqr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">s_der</span><span class="p">)</span>
+
+    <span class="c1"># Moving-window integration.</span>
+    <span class="n">s_int</span> <span class="o">=</span> <span class="n">basic_algos</span><span class="o">.</span><span class="n">moving_average_filter</span><span class="p">(</span><span class="n">arr</span><span class="o">=</span><span class="n">s_sqr</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">fs</span> <span class="o">*</span> <span class="mf">0.15</span><span class="p">),</span> <span class="nb">type</span> <span class="o">=</span> <span class="s2">&quot;triang&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Min-max normalize.</span>
+    <span class="n">s_norm</span> <span class="o">=</span> <span class="n">basic_algos</span><span class="o">.</span><span class="n">min_max_normalize</span><span class="p">(</span><span class="n">s_int</span><span class="p">)</span>
+
+    <span class="c1"># Find peaks.</span>
+    <span class="n">r_peaks</span> <span class="o">=</span> <span class="n">find_peaks</span><span class="p">(</span><span class="n">s_norm</span><span class="p">,</span> <span class="n">distance</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mf">0.4</span> <span class="o">*</span> <span class="n">fs</span><span class="p">),</span> <span class="n">height</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="c1"># Fix R peak positions.</span>
+    <span class="n">r_peaks</span> <span class="o">=</span> <span class="n">basic_algos</span><span class="o">.</span><span class="n">_find_corresponding</span><span class="p">(</span><span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="p">,</span> <span class="n">peaks</span> <span class="o">=</span> <span class="n">r_peaks</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fs</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">r_peaks</span></div>
+
+
+
+<div class="viewcode-block" id="get_peaks_from_ppg_using_segments">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.peak_detectors.get_peaks_from_ppg_using_segments">[docs]</a>
+<span class="k">def</span> <span class="nf">get_peaks_from_ppg_using_segments</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">set_overlap</span><span class="p">:</span><span class="nb">float</span><span class="p">,</span> <span class="n">signal_integration_window</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="n">segment</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span> <span class="n">get_peaks_only</span><span class="p">:</span><span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract PPG (Photoplethysmogram) peaks from raw data.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        Raw input signal.</span>
+<span class="sd">    fs</span>
+<span class="sd">        Sampling frequency of the signal.</span>
+<span class="sd">    set_overlap</span>
+<span class="sd">        Overlap between segments (used when segment &gt; 0).</span>
+<span class="sd">    signal_integration_window</span>
+<span class="sd">        Integration window for signal processing (default is 0, indicating no integration).</span>
+<span class="sd">    segment : optional</span>
+<span class="sd">        Number of segments to split the signal into (default is 3). Set to 0 for non-segmented processing.</span>
+<span class="sd">    get_peaks_only:</span>
+<span class="sd">        used to get peaks only or both as sorted ndarray</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    all_peaks : np.ndarray</span>
+<span class="sd">        Array containing all detected PPG peaks.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    To find the peaks or valleys in a given signal:</span>
+
+<span class="sd">    .. plot::</span>
+<span class="sd">       :include-source:</span>
+
+<span class="sd">       from vitalwave.example_data import load_biosignal</span>
+<span class="sd">       import matplotlib.pyplot as plt</span>
+
+<span class="sd">       import numpy as np</span>
+
+<span class="sd">       time, ppg = load_biosignal(type=&quot;PPG&quot;)</span>
+
+<span class="sd">       fs = (1 / np.mean(np.diff(time)))</span>
+
+<span class="sd">       from vitalwave.peak_detectors import get_peaks_from_ppg_using_segments</span>
+
+<span class="sd">       ppg_peaks = get_peaks_from_ppg_using_segments(arr=ppg, fs=int(fs), set_overlap = (fs * 2),</span>
+<span class="sd">                                                     get_peaks_only=False)</span>
+
+<span class="sd">       fig, ax = plt.subplots()</span>
+<span class="sd">       fig.set_size_inches(10, 6)</span>
+
+<span class="sd">       ax.plot(time, ppg)</span>
+<span class="sd">       ax.plot(time[ppg_peaks], ppg[ppg_peaks], &#39;go&#39;)</span>
+<span class="sd">       plt.show()</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># to allow for segmented and non segmented signal</span>
+    <span class="n">idx_segment_length</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">peaks_all</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">if</span> <span class="n">set_overlap</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">set_overlap</span> <span class="o">=</span> <span class="p">(</span><span class="n">fs</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="c1"># pre-filter</span>
+    <span class="n">ppg_filtered</span> <span class="o">=</span> <span class="p">[</span><span class="n">basic_algos</span><span class="o">.</span><span class="n">min_max_normalize</span><span class="p">(</span><span class="n">basic_algos</span><span class="o">.</span><span class="n">butter_filter</span><span class="p">(</span><span class="n">arr</span><span class="o">=</span><span class="n">arr</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">wn</span><span class="o">=</span><span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mi">8</span><span class="p">],</span>
+                                                                            <span class="n">filter_type</span><span class="o">=</span><span class="s1">&#39;bandpass&#39;</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">fs</span><span class="p">)))]</span>
+
+    <span class="c1"># make an area under the curve / volumetric</span>
+    <span class="k">if</span> <span class="n">signal_integration_window</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">ppg_filtered</span> <span class="o">=</span> <span class="n">basic_algos</span><span class="o">.</span><span class="n">moving_average_filter</span><span class="p">(</span><span class="n">arr</span><span class="o">=</span><span class="n">ppg_filtered</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                                         <span class="n">window</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">signal_integration_window</span><span class="p">),</span>
+                                                         <span class="nb">type</span> <span class="o">=</span> <span class="s2">&quot;triang&quot;</span><span class="p">)</span>
+
+    <span class="c1"># segment the signal / using np.split causes an error unless the split is not even</span>
+    <span class="k">if</span> <span class="n">segment</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">total_segment_length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ppg_filtered</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">//</span> <span class="n">segment</span> <span class="o">*</span> <span class="n">segment</span>
+        <span class="n">window</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ppg_filtered</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">//</span> <span class="n">segment</span><span class="p">)</span> <span class="o">+</span> <span class="n">set_overlap</span>
+
+        <span class="n">ppg_filtered</span> <span class="o">=</span> <span class="n">basic_algos</span><span class="o">.</span><span class="n">segmenting</span><span class="p">(</span><span class="n">arr</span><span class="p">[:</span><span class="n">total_segment_length</span><span class="p">],</span> <span class="n">window_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">window</span><span class="p">),</span> <span class="n">overlap</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">set_overlap</span><span class="p">))</span>
+
+    <span class="c1"># here single segment and multiple segments are processed within the same process.</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">ppg_segment</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ppg_filtered</span><span class="p">):</span>
+        <span class="n">feet_2_ppg</span> <span class="o">=</span> <span class="n">ampd</span><span class="p">(</span><span class="o">-</span><span class="n">ppg_segment</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">fs</span><span class="p">))</span>
+        <span class="n">peaks_2_ppg</span> <span class="o">=</span> <span class="n">ampd</span><span class="p">(</span><span class="n">ppg_segment</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">fs</span><span class="p">))</span>
+
+        <span class="n">initial_peaks_ppg</span> <span class="o">=</span> <span class="n">peaks_2_ppg</span> <span class="k">if</span> <span class="n">get_peaks_only</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">feet_2_ppg</span><span class="p">,</span> <span class="n">peaks_2_ppg</span><span class="p">)))</span>
+        <span class="n">initial_peaks_ppg</span> <span class="o">+=</span> <span class="n">idx_segment_length</span>
+
+        <span class="n">idx_segment_length</span> <span class="o">+=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ppg_segment</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">set_overlap</span><span class="p">)</span>
+
+        <span class="n">peaks_all</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">initial_peaks_ppg</span><span class="p">)</span>
+
+    <span class="c1"># found peaks are returned</span>
+    <span class="n">all_peaks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">peaks_all</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">all_peaks</span></div>
+
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">vitalwave.example_data</span> <span class="kn">import</span> <span class="n">load_biosignal</span>
+    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+    <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+    <span class="n">limits</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2000</span><span class="p">]</span>
+    <span class="n">time</span><span class="p">,</span> <span class="n">ppg</span> <span class="o">=</span> <span class="n">load_biosignal</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">&quot;PPG&quot;</span><span class="p">)</span>
+
+    <span class="n">fs</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">time</span><span class="p">)))</span>
+
+    <span class="kn">from</span> <span class="nn">vitalwave.peak_detectors</span> <span class="kn">import</span> <span class="n">msptd</span>
+
+    <span class="n">start</span><span class="p">,</span> <span class="n">stop</span> <span class="o">=</span> <span class="n">limits</span>
+
+    <span class="c1"># calculate ppg peaks and valleys - msptd (Modified Smoothed Peak Detection)</span>
+    <span class="n">ppg_msptd_peaks</span><span class="p">,</span> <span class="n">ppg_msptd_feet</span> <span class="o">=</span> <span class="n">msptd</span><span class="p">(</span><span class="n">ppg</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">],</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">)</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">set_size_inches</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">[:</span><span class="n">stop</span><span class="p">],</span> <span class="n">ppg</span><span class="p">[:</span><span class="n">stop</span><span class="p">])</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">[:</span><span class="n">stop</span><span class="p">][</span><span class="n">ppg_msptd_peaks</span><span class="p">],</span> <span class="n">ppg</span><span class="p">[:</span><span class="n">stop</span><span class="p">][</span><span class="n">ppg_msptd_peaks</span><span class="p">],</span> <span class="s1">&#39;go&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">[:</span><span class="n">stop</span><span class="p">][</span><span class="n">ppg_msptd_feet</span><span class="p">],</span> <span class="n">ppg</span><span class="p">[:</span><span class="n">stop</span><span class="p">][</span><span class="n">ppg_msptd_feet</span><span class="p">],</span> <span class="s1">&#39;ro&#39;</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Time [s]&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Modified Smoothed Peak Detection; for PPG&quot;</span><span class="p">)</span>
+
+    <span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, MW.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

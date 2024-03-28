@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>src.vitalwave.basic_algos &mdash; Vital Wave  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/plot_directive.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Vital Wave
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">Vital Wave Library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../main_content.html">Healthcare Variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../main_content.html#vital-wave-measuring-the-heart">Vital Wave - measuring the heart</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Vital Wave</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">src.vitalwave.basic_algos</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for src.vitalwave.basic_algos</h1><div class="highlight"><pre>
+<span></span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">pywt</span> <span class="kn">import</span> <span class="n">wavedec</span><span class="p">,</span> <span class="n">waverec</span>
+
+<span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="kn">import</span> <span class="n">interp1d</span>
+<span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="kn">import</span> <span class="n">filtfilt</span><span class="p">,</span> <span class="n">butter</span><span class="p">,</span> <span class="n">hilbert</span><span class="p">,</span> <span class="n">sosfiltfilt</span><span class="p">,</span> <span class="n">windows</span><span class="p">,</span> <span class="n">medfilt</span>
+
+<div class="viewcode-block" id="butter_filter">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.basic_algos.butter_filter">[docs]</a>
+<span class="k">def</span> <span class="nf">butter_filter</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">wn</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">filter_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Performs zero-phase Butterworth filtering.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        Signal that will be filtered.</span>
+<span class="sd">    n</span>
+<span class="sd">        Order of the filter.</span>
+<span class="sd">    wn</span>
+<span class="sd">        Cutoff frequencies.</span>
+<span class="sd">    filter_type</span>
+<span class="sd">        Type of the filter. Alternatives: lowpass, highpass, bandpass, bandstop.</span>
+<span class="sd">    fs</span>
+<span class="sd">        Sampling frequency of the signal.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    arr_filtered</span>
+<span class="sd">        Filtered signal.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    Without normalization:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       basic_algos.butter_filter(arr=nd_ecg, n=4, wn=[0.5, 8], filter_type=&#39;bandpass&#39;, fs=fs)</span>
+
+<span class="sd">    With normalization:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       basic_algos.min_max_normalize(basic_algos.butter_filter(arr=nd_ecg, n=4, wn=[0.5, 8],</span>
+<span class="sd">                                                               filter_type=&#39;bandpass&#39;, fs=fs))</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Second-order sections.</span>
+    <span class="n">sos</span> <span class="o">=</span> <span class="n">butter</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">wn</span><span class="p">,</span> <span class="n">filter_type</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s1">&#39;sos&#39;</span><span class="p">)</span>
+    <span class="c1"># Filtering.</span>
+    <span class="n">arr_filtered</span> <span class="o">=</span> <span class="n">sosfiltfilt</span><span class="p">(</span><span class="n">sos</span><span class="p">,</span> <span class="n">arr</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">arr_filtered</span></div>
+
+
+
+<div class="viewcode-block" id="min_max_normalize">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.basic_algos.min_max_normalize">[docs]</a>
+<span class="k">def</span> <span class="nf">min_max_normalize</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">min_val</span><span class="p">:</span> <span class="nb">float</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">max_val</span><span class="p">:</span> <span class="nb">float</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Min-max normalizes an array.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        Signal which will be normalized.</span>
+<span class="sd">    min_val</span>
+<span class="sd">        Minimum value of the resulting signal.</span>
+<span class="sd">    max_val</span>
+<span class="sd">        Maximum value of the resulting signal.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    np.ndarray</span>
+<span class="sd">        Normalized version of arr.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    To normalize the signal-values without using the standard-scaler based method:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       basic_algos.min_max_normalize(arr = nd_ecg)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">s_norm</span> <span class="o">=</span> <span class="n">min_val</span> <span class="o">+</span> <span class="p">(</span><span class="n">arr</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">arr</span><span class="p">))</span> <span class="o">*</span> <span class="p">(</span><span class="n">max_val</span> <span class="o">-</span> <span class="n">min_val</span><span class="p">)</span> <span class="o">/</span> \
+        <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">arr</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">s_norm</span></div>
+
+
+<div class="viewcode-block" id="resample">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.basic_algos.resample">[docs]</a>
+<span class="k">def</span> <span class="nf">resample</span><span class="p">(</span><span class="n">timestamps</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">timestamps_new</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Resample a time series to a new time axis.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    timestamps</span>
+<span class="sd">        Original timestamps.</span>
+<span class="sd">    arr</span>
+<span class="sd">        Original values.</span>
+<span class="sd">    timestamps_new</span>
+<span class="sd">        Timestamps used as the basis in resampling. This must</span>
+<span class="sd">        be in the same unit as timestamps.</span>
+<span class="sd">    dt</span>
+<span class="sd">        Timestep of the new time series. This must be</span>
+<span class="sd">        in the same unit as timestamps.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    timestamps_new</span>
+<span class="sd">        An array of resampled timestamps.</span>
+<span class="sd">    arr_new</span>
+<span class="sd">        An array of resampled values.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    To setup new time based frequency to an existing signal:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       basic_algos.resample(timestamps = ecg_ts, arr = ecg, ts_new = timestamps_new)</span>
+
+<span class="sd">    or by proving the :math:`\Delta` time variable:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       basic_algos.resample(timestamps = ecg_ts, arr = ecg, dt = 0.005)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">timestamps_new</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">dt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Either timestamps_new or dt must be given.&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Array of new timestamps.</span>
+    <span class="k">if</span> <span class="n">timestamps_new</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">timestamps_new</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">timestamps</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">timestamps</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">dt</span><span class="p">,</span> <span class="n">dt</span><span class="p">)</span>
+    <span class="c1"># Interpolation function.</span>
+    <span class="n">f_interp</span> <span class="o">=</span> <span class="n">interp1d</span><span class="p">(</span><span class="n">timestamps</span><span class="p">,</span> <span class="n">arr</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;cubic&#39;</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="s1">&#39;extrapolate&#39;</span><span class="p">)</span>
+    <span class="c1"># Resampled timeseries.</span>
+    <span class="n">arr_new</span> <span class="o">=</span> <span class="n">f_interp</span><span class="p">(</span><span class="n">timestamps_new</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">timestamps_new</span><span class="p">,</span> <span class="n">arr_new</span></div>
+
+
+<div class="viewcode-block" id="derivative_filter">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.basic_algos.derivative_filter">[docs]</a>
+<span class="k">def</span> <span class="nf">derivative_filter</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Derivative filtering.</span>
+
+<span class="sd">    A derivative filter according to Pan-Tompkins algorithm.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        Data that will be filtered.        </span>
+<span class="sd">    fs</span>
+<span class="sd">        Sampling rate.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    arr_filt</span>
+<span class="sd">        Filtered data.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    To highlight the the peaks and valleys of the original signal.</span>
+<span class="sd">    The use of the derivative filter is linked with the moving_average_filter:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       basic_algos.derivative_filter(arr=ecg, fs=200)</span>
+
+<span class="sd">    An example to have the functions working together is linked with it.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Filter coefficients.</span>
+    <span class="n">coeffs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">8</span><span class="p">)</span> <span class="o">*</span> <span class="n">fs</span>
+    <span class="c1"># Forward-backward filtering.</span>
+    <span class="n">arr_filt</span> <span class="o">=</span> <span class="n">filtfilt</span><span class="p">(</span><span class="n">coeffs</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">arr</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">arr_filt</span></div>
+
+
+<div class="viewcode-block" id="moving_average_filter">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.basic_algos.moving_average_filter">[docs]</a>
+<span class="k">def</span> <span class="nf">moving_average_filter</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">type</span> <span class="o">=</span> <span class="s2">&quot;triang&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Moving window integration and moving average</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        Data that will be integrated.</span>
+<span class="sd">    window</span>
+<span class="sd">        Number of samples in the window.</span>
+<span class="sd">    type</span>
+<span class="sd">        Valid types to call for are &quot;triang&quot; and &quot;moving_avg&quot;</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    nd_array</span>
+<span class="sd">        Integrated data or moving average data</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    To produce a distorted signal highlighting the r-peak in the QRS-complex of the ECG.</span>
+
+<span class="sd">    .. plot::</span>
+<span class="sd">       :include-source:</span>
+
+<span class="sd">       import numpy as np</span>
+
+<span class="sd">       from vitalwave.basic_algos import moving_average_filter</span>
+<span class="sd">       from vitalwave.example_data import load_biosignal</span>
+
+<span class="sd">       import matplotlib.pyplot as plt</span>
+
+<span class="sd">       limits = [0, 2000]</span>
+
+<span class="sd">       time, ecg = load_biosignal(type=&quot;ECG&quot;)</span>
+<span class="sd">       fs = (1 / np.mean(np.diff(time)))</span>
+
+<span class="sd">       nd_arr_triang = moving_average_filter(arr=ecg, window=int(fs * 0.15))</span>
+
+<span class="sd">       fig, ax = plt.subplots(1, 1, sharex=True)</span>
+
+<span class="sd">       start, stop = limits</span>
+<span class="sd">       ax.plot(time[start:stop], nd_arr_triang[start:stop])</span>
+<span class="sd">       ax.set_title(&#39;Smoothing&#39;)</span>
+<span class="sd">       ax.set_xlabel(&#39;Time [s]&#39;)</span>
+
+<span class="sd">       fig.tight_layout()</span>
+
+<span class="sd">       plt.show()</span>
+
+<span class="sd">    The example is linked with the derivative_filter function found in the same module.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">match</span> <span class="nb">type</span><span class="p">:</span>
+        <span class="k">case</span> <span class="s2">&quot;triang&quot;</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">windows</span><span class="o">.</span><span class="n">triang</span><span class="p">(</span><span class="n">window</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;same&#39;</span><span class="p">)</span>
+        <span class="k">case</span> <span class="s2">&quot;moving_avg&quot;</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">window</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;same&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="n">window</span>
+        <span class="k">case</span><span class="w"> </span><span class="k">_</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="n">data</span></div>
+
+
+<div class="viewcode-block" id="wavelet_transform_signal">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.basic_algos.wavelet_transform_signal">[docs]</a>
+<span class="k">def</span> <span class="nf">wavelet_transform_signal</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">dwt_transform</span><span class="p">,</span> <span class="n">dlevels</span><span class="p">,</span> <span class="n">cutoff_low</span><span class="p">,</span> <span class="n">cutoff_high</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Designed to work with noisy signal as a first-pass mechanism.</span>
+
+<span class="sd">    Performs wavelet decomposition on the input channel using pywt.wavedec,</span>
+<span class="sd">    This returns a &lt;list&gt; of coefficients. The coefficients in the specified ranges are</span>
+<span class="sd">    multiplied by zero to remove their contribution.</span>
+<span class="sd">    Finally, a reconstructed signal is returned based on the wavelet coefficients.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        signal to process</span>
+<span class="sd">    dwt_transform</span>
+<span class="sd">        Wavelet transformation function - good defualt: &#39;bior4.4&#39;</span>
+<span class="sd">    dlevels</span>
+<span class="sd">        wavedeck: level parameter</span>
+<span class="sd">    cutoff_low</span>
+<span class="sd">        the scale up to which coefficients will be zeroed</span>
+<span class="sd">    cutoff_high</span>
+<span class="sd">        the scale from which coefficients will be zeroed</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    np.ndarray</span>
+<span class="sd">        corrected_signal with inverse wavelet transform</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    To clean-up noisy signal prior to processing it with the Butterworth bandpass-filter.</span>
+<span class="sd">    The example-code includes the linking with the Butterworth bandpass filter:</span>
+
+<span class="sd">    .. plot::</span>
+<span class="sd">       :include-source:</span>
+
+<span class="sd">       import numpy as np</span>
+
+<span class="sd">       from vitalwave.basic_algos import butter_filter, min_max_normalize, wavelet_transform_signal</span>
+<span class="sd">       from vitalwave.example_data import load_biosignal</span>
+
+<span class="sd">       import matplotlib.pyplot as plt</span>
+
+<span class="sd">       limits = [0, 1000]</span>
+
+<span class="sd">       time, ecg = load_biosignal(type=&quot;ECG&quot;)</span>
+<span class="sd">       fs = (1 / np.mean(np.diff(time)))</span>
+
+<span class="sd">       nd_ecg_denoiced = wavelet_transform_signal(arr=ecg, dwt_transform=&#39;bior4.4&#39;, dlevels=9,</span>
+<span class="sd">                                                  cutoff_low=1, cutoff_high=9)</span>
+
+<span class="sd">       ecg_filt_cleaned = min_max_normalize(butter_filter(arr=nd_ecg_denoiced, n=4, wn=[0.5, 8],</span>
+<span class="sd">                                                          filter_type=&#39;bandpass&#39;, fs=fs))</span>
+
+<span class="sd">       fig, axes = plt.subplots(2, 1, sharex=True)</span>
+<span class="sd">       start, stop = limits</span>
+
+<span class="sd">       axes[0].plot(time[start:stop], ecg[start:stop])</span>
+<span class="sd">       axes[1].plot(time[start:stop], ecg_filt_cleaned[start:stop])</span>
+
+<span class="sd">       axes[0].set_title(&#39;Filtered ECG&#39;)</span>
+<span class="sd">       axes[1].set_title(&#39;wavedeck &#39;)</span>
+
+<span class="sd">       axes[1].set_xlabel(&#39;Time [s]&#39;)</span>
+<span class="sd">       fig.tight_layout()</span>
+
+<span class="sd">       plt.show()</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">coeffs</span> <span class="o">=</span> <span class="n">wavedec</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">dwt_transform</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">dlevels</span><span class="p">)</span>
+
+    <span class="c1"># scale 0 to cutoff_low</span>
+    <span class="k">for</span> <span class="n">ca</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">cutoff_low</span><span class="p">):</span>
+        <span class="n">coeffs</span><span class="p">[</span><span class="n">ca</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">coeffs</span><span class="p">[</span><span class="n">ca</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">])</span>
+
+    <span class="c1"># scale cutoff_high to end</span>
+    <span class="k">for</span> <span class="n">ca</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">cutoff_high</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">coeffs</span><span class="p">)):</span>
+        <span class="n">coeffs</span><span class="p">[</span><span class="n">ca</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">coeffs</span><span class="p">[</span><span class="n">ca</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">])</span>
+
+    <span class="n">wavelet_trans</span> <span class="o">=</span> <span class="n">waverec</span><span class="p">(</span><span class="n">coeffs</span><span class="p">,</span> <span class="n">dwt_transform</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">wavelet_trans</span></div>
+
+
+<div class="viewcode-block" id="extract_waveforms">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.basic_algos.extract_waveforms">[docs]</a>
+<span class="k">def</span> <span class="nf">extract_waveforms</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fid_points</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
+                      <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extracts waveforms from a signal using an array of fiducial points.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        Signal from which the waveforms are extracted.</span>
+<span class="sd">    fid_points</span>
+<span class="sd">        Fiducial points used as a basis for extracting the waveforms.</span>
+<span class="sd">    mode</span>
+<span class="sd">        How the fiducial points are used to extract the waveforms:</span>
+<span class="sd">        - fid_to_fid: from one fiducial point to the next one.</span>
+<span class="sd">        For example, from one PPG foot to another one.</span>
+<span class="sd">        - nn_interval: the waveform is extracted around each</span>
+<span class="sd">        fiducial point by taking half of the NN interval before</span>
+<span class="sd">        and after.</span>
+<span class="sd">        - window: the waveform is extracted around each fiducial</span>
+<span class="sd">        point using a window. NOTE: In this case the parameter</span>
+<span class="sd">        window must be defined.</span>
+<span class="sd">    window</span>
+<span class="sd">        The number of samples to take around the fiducial points.</span>
+<span class="sd">        The parameter must be odd. The number of samples taken </span>
+<span class="sd">        from left and right is window // 2.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    waveforms</span>
+<span class="sd">        An array of extracted waveforms where each row corresponds</span>
+<span class="sd">        to one waveform.</span>
+<span class="sd">    mean_waveform</span>
+<span class="sd">        The calculated mean waveform.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    .. plot::</span>
+<span class="sd">       :include-source:</span>
+
+<span class="sd">       from vitalwave.example_data import load_biosignal</span>
+<span class="sd">       import matplotlib.pyplot as plt</span>
+
+<span class="sd">       import numpy as np</span>
+
+<span class="sd">       time, ecg = load_biosignal(type=&quot;ECG&quot;)</span>
+<span class="sd">       time, ppg = load_biosignal(type=&quot;PPG&quot;)</span>
+
+<span class="sd">       fs = (1 / np.mean(np.diff(time)))</span>
+
+<span class="sd">       from vitalwave.basic_algos import extract_waveforms</span>
+<span class="sd">       from vitalwave.peak_detectors import ecg_modified_pan_tompkins, msptd</span>
+
+<span class="sd">       make_odd = lambda x: x + (x % 2 == 0)</span>
+
+<span class="sd">       # calculate ECG r-peaks</span>
+<span class="sd">       ecg_r_peaks = ecg_modified_pan_tompkins(ecg, fs=fs)</span>
+
+<span class="sd">       # calculate ppg peaks and valleys - msptd (Modified Smoothed Peak Detection)</span>
+<span class="sd">       ppg_msptd_peaks, ppg_msptd_feet = msptd(ppg, fs=fs)</span>
+
+<span class="sd">       ppg_wfs, ppg_wfs_mean = extract_waveforms(ppg, ppg_msptd_feet, &#39;fid_to_fid&#39;)</span>
+<span class="sd">       ecg_wfs1, ecg_wfs1_mean = extract_waveforms(ecg, ecg_r_peaks, &#39;window&#39;, int(make_odd(fs)))</span>
+<span class="sd">       ecg_wfs2, ecg_wfs2_mean = extract_waveforms(ecg, ecg_r_peaks, &#39;nn_interval&#39;)</span>
+
+<span class="sd">       # Plot the waveforms.</span>
+<span class="sd">       def plot_wfs(wfs, wfs_mean, title):</span>
+<span class="sd">          fig, ax = plt.subplots()</span>
+
+<span class="sd">          for wf in wfs:</span>
+<span class="sd">             ax.plot(wf, c=&#39;tab:blue&#39;, alpha=0.2)</span>
+
+<span class="sd">          ax.plot(wfs_mean, c=&#39;tab:orange&#39;, linewidth=2)</span>
+<span class="sd">          ax.set_title(title)</span>
+<span class="sd">          fig.tight_layout()</span>
+<span class="sd">          plt.show()</span>
+
+<span class="sd">       plot_wfs(ppg_wfs, ppg_wfs_mean, &#39;PPG waveforms, feet to feet&#39;)</span>
+<span class="sd">       plot_wfs(ecg_wfs1, ecg_wfs1_mean, &#39;ECG waveforms, window&#39;)</span>
+<span class="sd">       plot_wfs(ecg_wfs2, ecg_wfs2_mean, &#39;ECG waveforms, NN interval&#39;)</span>
+
+<span class="sd">    To extract the waveforms from the source-signal Fiducial point is required:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Parameter validation.</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;window&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">window</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Window parameter must be given in window mode.&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">window</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Window must be an odd integer.&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Max NN interval.</span>
+    <span class="n">nn_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">fid_points</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;fid_to_fid&#39;</span><span class="p">:</span>
+        <span class="c1"># Create an empty array for holding the waveforms.</span>
+        <span class="n">waveforms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">fid_points</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">nn_max</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+        <span class="c1"># Loop through the fiducial points in pairs.</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">fds</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">fid_points</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">fid_points</span><span class="p">[</span><span class="mi">1</span><span class="p">:])):</span>
+            <span class="n">waveforms</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:</span><span class="nb">int</span><span class="p">(</span><span class="n">fds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">fds</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[</span><span class="n">fds</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span><span class="n">fds</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+    
+    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;nn_interval&#39;</span><span class="p">:</span>
+        <span class="c1"># Create an empty array for holding the waveforms.</span>
+        <span class="n">waveforms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">fid_points</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">nn_max</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+        <span class="c1"># Center point of the longest NN interval.</span>
+        <span class="n">nn_max_center</span> <span class="o">=</span> <span class="n">nn_max</span> <span class="o">//</span> <span class="mi">2</span>
+        <span class="c1"># Loop through the fiducial points starting from the second</span>
+        <span class="c1"># until the second last.</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">fid_points</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="c1"># Number of samples to take from left and right.</span>
+            <span class="n">samples_left</span> <span class="o">=</span> <span class="p">(</span><span class="n">fid_points</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">fid_points</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span> <span class="o">//</span> <span class="mi">2</span>
+            <span class="n">samples_right</span> <span class="o">=</span> <span class="p">(</span><span class="n">fid_points</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">fid_points</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">//</span> <span class="mi">2</span>
+            <span class="c1"># Place the waveform into the matrix.</span>
+            <span class="n">waveforms</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">nn_max_center</span> <span class="o">-</span> <span class="n">samples_left</span><span class="p">:</span><span class="n">nn_max_center</span> <span class="o">+</span> <span class="n">samples_right</span><span class="p">]</span> <span class="o">=</span> \
+                <span class="n">arr</span><span class="p">[</span><span class="n">fid_points</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">samples_left</span><span class="p">:</span><span class="n">fid_points</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">samples_right</span><span class="p">]</span>
+
+        <span class="c1"># Remove columns with just NaN values. These columns could happen due to</span>
+        <span class="c1"># integer divisions used above. This line is just a way to get rid of </span>
+        <span class="c1"># nanmean&#39;s &quot;Mean of empty slice&quot; warning.</span>
+        <span class="n">waveforms</span> <span class="o">=</span> <span class="n">waveforms</span><span class="p">[:,</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">waveforms</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)]</span>    
+
+    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;window&#39;</span><span class="p">:</span>
+        <span class="c1"># Create an empty array for holding the waveforms.</span>
+        <span class="n">waveforms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">fid_points</span><span class="p">),</span> <span class="n">window</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+        <span class="c1"># Center point.</span>
+        <span class="n">wf_center</span> <span class="o">=</span> <span class="n">window</span> <span class="o">//</span> <span class="mi">2</span>
+        <span class="c1"># Loop through the fiducial points.</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">fp</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fid_points</span><span class="p">):</span>
+            <span class="c1"># Number of samples to take from left and right.</span>
+            <span class="n">samples_left</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span> <span class="n">wf_center</span><span class="p">)</span>
+            <span class="n">samples_right</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">-</span> <span class="n">fp</span><span class="p">,</span> <span class="n">wf_center</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="c1"># Place the waveform into the matrix.</span>
+            <span class="n">waveforms</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">wf_center</span> <span class="o">-</span> <span class="n">samples_left</span><span class="p">:</span><span class="n">wf_center</span> <span class="o">+</span> <span class="n">samples_right</span><span class="p">]</span> <span class="o">=</span> \
+                <span class="n">arr</span><span class="p">[</span><span class="n">fid_points</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">samples_left</span><span class="p">:</span><span class="n">fid_points</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">samples_right</span><span class="p">]</span>
+        
+    <span class="c1"># Compute the mean waveform.</span>
+    <span class="n">mean_waveform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">waveforms</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">waveforms</span><span class="p">,</span> <span class="n">mean_waveform</span></div>
+
+
+<div class="viewcode-block" id="filter_hr">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.basic_algos.filter_hr">[docs]</a>
+<span class="k">def</span> <span class="nf">filter_hr</span><span class="p">(</span><span class="n">heart_rates</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> 
+              <span class="n">hr_max_diff</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span> <span class="n">hr_min</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span> <span class="n">hr_max</span><span class="p">:</span><span class="nb">int</span><span class="o">=</span><span class="mi">180</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Filter instantaneous heart rates (HRs) with a median</span>
+<span class="sd">    filter.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    heart_rates</span>
+<span class="sd">        An array of instantaneous HRs [bpm].</span>
+<span class="sd">    kernel_size</span>
+<span class="sd">        Kernel size used in the median filter.</span>
+<span class="sd">    hr_max_diff</span>
+<span class="sd">        Maximum allowed HR difference [bpm].</span>
+<span class="sd">    hr_min</span>
+<span class="sd">        Lowest allowed HR [bpm].</span>
+<span class="sd">    hr_max</span>
+<span class="sd">        Highest allowed HR [bpm].</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    heart_rates</span>
+<span class="sd">        An array of filtered instantaneous HRs.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    To calculate the initial heart-beat validity based on an existing set of values.</span>
+
+<span class="sd">    .. plot::</span>
+<span class="sd">       :include-source:</span>
+
+<span class="sd">       import numpy as np</span>
+
+<span class="sd">       from vitalwave.example_data import load_biosignal</span>
+<span class="sd">       import matplotlib.pyplot as plt</span>
+
+<span class="sd">       limits = [0, 1000]</span>
+
+<span class="sd">       time, ecg = load_biosignal(type=&quot;ECG&quot;)</span>
+
+<span class="sd">       fs = (1 / np.mean(np.diff(time)))</span>
+
+<span class="sd">       from vitalwave.basic_algos import butter_filter, filter_hr</span>
+<span class="sd">       from vitalwave import peak_detectors</span>
+
+<span class="sd">       ecg_filt = butter_filter(ecg, 4, [0.5, 25], &#39;bandpass&#39;, fs=fs)</span>
+<span class="sd">       ecg_r_peaks = peak_detectors.ecg_modified_pan_tompkins(ecg_filt, fs=fs)</span>
+<span class="sd">       heart_rates = 60 / np.diff(time[ecg_r_peaks])</span>
+<span class="sd">       heart_rates_filt = filter_hr(heart_rates, 11)</span>
+
+<span class="sd">       fig, ax = plt.subplots()</span>
+<span class="sd">       ax.plot(heart_rates)</span>
+<span class="sd">       ax.plot(heart_rates_filt)</span>
+<span class="sd">       ax.set_xlabel(&#39;Time [s]&#39;)</span>
+<span class="sd">       ax.set_ylabel(&#39;Heart rate [bpm]&#39;)</span>
+<span class="sd">       ax.set_ylim(40, 200)</span>
+<span class="sd">       fig.tight_layout()</span>
+<span class="sd">       plt.show()</span>
+
+<span class="sd">    The results show normal heart-rate variability along with abnormal.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Make a copy to avoid modifying the original array.</span>
+    <span class="n">heart_rates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">heart_rates</span><span class="p">)</span>
+    <span class="c1"># Median filtering.</span>
+    <span class="n">heart_rates_med</span> <span class="o">=</span> <span class="n">medfilt</span><span class="p">(</span><span class="n">heart_rates</span><span class="p">,</span> <span class="n">kernel_size</span><span class="p">)</span>
+    <span class="c1"># Indices to select.</span>
+    <span class="n">idxs</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">heart_rates</span> <span class="o">-</span> <span class="n">heart_rates_med</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">hr_max_diff</span><span class="p">)</span> <span class="o">&amp;</span> \
+        <span class="p">(</span><span class="n">heart_rates_med</span> <span class="o">&gt;=</span> <span class="n">hr_min</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">heart_rates_med</span> <span class="o">&lt;=</span> <span class="n">hr_max</span><span class="p">)</span>
+    <span class="c1"># Mark the rest of the indices to NaNs.</span>
+    <span class="n">heart_rates</span><span class="p">[</span><span class="o">~</span><span class="n">idxs</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="k">return</span> <span class="n">heart_rates</span></div>
+
+
+<div class="viewcode-block" id="homomorphic_hilbert_envelope">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.basic_algos.homomorphic_hilbert_envelope">[docs]</a>
+<span class="k">def</span> <span class="nf">homomorphic_hilbert_envelope</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">order</span><span class="p">:</span><span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">cutoff_fz</span><span class="p">:</span><span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The homomorphic_hilbert_envelope function is applied to enhance the waveform&#39;s envelope. steps:</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        signal designed for transformation</span>
+<span class="sd">    fs</span>
+<span class="sd">        sample frequency</span>
+<span class="sd">    order</span>
+<span class="sd">        sharpness of transition between passband and stopband</span>
+<span class="sd">    cutoff_fz</span>
+<span class="sd">        The critical frequency or frequencies of the butter-filter</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    filtered_envelope</span>
+<span class="sd">        Filtered envelope of the input signal.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    To calculate the homomorphic Hilbert envelope; in order to produce a low-resolution mock-up signal of the original.</span>
+
+<span class="sd">    .. plot::</span>
+<span class="sd">       :include-source:</span>
+
+<span class="sd">       import numpy as np</span>
+
+<span class="sd">       from vitalwave.example_data import load_biosignal</span>
+<span class="sd">       import matplotlib.pyplot as plt</span>
+
+<span class="sd">       limits = [0, 1000]</span>
+
+<span class="sd">       time, ecg = load_biosignal(type=&quot;ECG&quot;)</span>
+
+<span class="sd">       fs = (1 / np.mean(np.diff(time)))</span>
+
+<span class="sd">       from vitalwave.basic_algos import homomorphic_hilbert_envelope</span>
+
+<span class="sd">       ecg_hilbert = homomorphic_hilbert_envelope(arr=ecg, fs=fs)</span>
+
+<span class="sd">       fig, axes = plt.subplots(2, 1, sharex=True)</span>
+<span class="sd">       start, stop = limits</span>
+
+<span class="sd">       axes[0].plot(time[start:stop], ecg[start:stop])</span>
+<span class="sd">       axes[1].plot(time[start:stop], ecg_hilbert[start:stop])</span>
+
+<span class="sd">       axes[0].set_title(&#39;ECG-signal&#39;)</span>
+<span class="sd">       axes[1].set_title(&#39;with Hilbert Envelope&#39;)</span>
+
+<span class="sd">       plt.show()</span>
+
+<span class="sd">    The end result is a signal with key features retained from the original signal</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Apply a zero-phase low-pass Butterworth filter, 1st order, with a cutoff frequency of 8 Hz</span>
+    <span class="n">b_low</span><span class="p">,</span> <span class="n">a_low</span> <span class="o">=</span> <span class="n">butter</span><span class="p">(</span><span class="n">N</span> <span class="o">=</span> <span class="n">order</span><span class="p">,</span> <span class="n">Wn</span> <span class="o">=</span> <span class="n">cutoff_fz</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span> <span class="n">btype</span><span class="o">=</span><span class="s1">&#39;lowpass&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Calculate the Hilbert envelope of the input signal</span>
+    <span class="n">analytic_signal</span> <span class="o">=</span> <span class="n">hilbert</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span>
+    <span class="n">envelope</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">analytic_signal</span><span class="p">)</span>
+
+    <span class="c1"># Apply the low-pass filter to the log of the envelope</span>
+    <span class="n">log_envelope</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">envelope</span><span class="p">)</span>
+    <span class="n">filtered_envelope</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">filtfilt</span><span class="p">(</span><span class="n">b_low</span><span class="p">,</span> <span class="n">a_low</span><span class="p">,</span> <span class="n">log_envelope</span><span class="p">))</span>
+
+    <span class="c1"># Remove spurious spikes in the first sample</span>
+    <span class="n">filtered_envelope</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">filtered_envelope</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">filtered_envelope</span></div>
+
+
+
+<div class="viewcode-block" id="calculate_time_delay">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.basic_algos.calculate_time_delay">[docs]</a>
+<span class="k">def</span> <span class="nf">calculate_time_delay</span><span class="p">(</span><span class="n">arr_ecg</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">arr_ppg</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">peaks_ecg</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span><span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate time delay between ECG and PPG signals based on corresponding peaks.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr_ecg</span>
+<span class="sd">        ECG signal.</span>
+<span class="sd">    arr_ppg</span>
+<span class="sd">        PPG signal.</span>
+<span class="sd">    peaks_ecg</span>
+<span class="sd">        Peaks in the ECG signal.</span>
+<span class="sd">    fs</span>
+<span class="sd">        Sampling frequency.</span>
+<span class="sd">    key</span>
+<span class="sd">        Identifier, by default &quot;id&quot;.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    numpy.ndarray</span>
+<span class="sd">        Timestamps of corresponding PPG peaks.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    To Syncronize ECG and PPG peaks discovery.</span>
+
+<span class="sd">    .. plot::</span>
+<span class="sd">       :include-source:</span>
+
+<span class="sd">       import numpy as np</span>
+
+<span class="sd">       from vitalwave.example_data import load_biosignal</span>
+<span class="sd">       import matplotlib.pyplot as plt</span>
+
+<span class="sd">       limits = [0, 1000]</span>
+
+<span class="sd">       time, ecg = load_biosignal(type=&quot;ECG&quot;)</span>
+<span class="sd">       time, ppg = load_biosignal(type=&quot;ECG&quot;)</span>
+
+<span class="sd">       fs = (1 / np.mean(np.diff(time)))</span>
+
+<span class="sd">       from vitalwave.basic_algos import calculate_time_delay</span>
+<span class="sd">       from vitalwave.peak_detectors import ecg_modified_pan_tompkins, msptd</span>
+
+<span class="sd">       # calculate ECG r-peaks</span>
+<span class="sd">       ecg_r_peaks = ecg_modified_pan_tompkins(ecg, fs=fs)</span>
+
+<span class="sd">       # calculate ppg peaks and valleys - msptd (Modified Smoothed Peak Detection)</span>
+<span class="sd">       ppg_msptd_peaks, ppg_msptd_feet = msptd(ppg, fs=fs)</span>
+
+<span class="sd">       locs_ppg = calculate_time_delay(arr_ecg=ecg, arr_ppg=ppg,</span>
+<span class="sd">                                       peaks_ecg=ecg_r_peaks, fs=int(fs))</span>
+
+<span class="sd">       fig, ax = plt.subplots()</span>
+<span class="sd">       fig.set_size_inches(10, 6)</span>
+
+<span class="sd">       ax.plot(time, ppg)</span>
+
+<span class="sd">       ax.plot(time[ppg_msptd_feet], ppg[ppg_msptd_feet], &#39;go&#39;)</span>
+<span class="sd">       ax.plot(time[locs_ppg], ppg[locs_ppg], &#39;ro&#39;)</span>
+
+<span class="sd">       ax.set_xlabel(&#39;Time [s]&#39;)</span>
+<span class="sd">       ax.set_title(&quot;sync ECG with PPG &quot;)</span>
+
+<span class="sd">       fig.tight_layout()</span>
+<span class="sd">       plt.show()</span>
+
+<span class="sd">    The results show the systolic PPG-peak discovery with using the ECG-Pan-Tomkins based method.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">locs_ecg_corrected</span> <span class="o">=</span> <span class="n">_find_corresponding</span><span class="p">(</span><span class="n">arr_ecg</span><span class="p">,</span> <span class="n">peaks_ecg</span><span class="p">,</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">fs</span><span class="p">)</span>
+    <span class="n">locs_ppg</span> <span class="o">=</span> <span class="n">_find_corresponding</span><span class="p">(</span><span class="n">arr_ppg</span><span class="p">,</span> <span class="n">locs_ecg_corrected</span><span class="p">,</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">fs</span><span class="p">,</span> <span class="n">sym</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">locs_ppg</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">_find_corresponding</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">peaks</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">sym</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Find corresponding peaks in the given channel using a window of a certain size.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        Signal channel.</span>
+<span class="sd">    peaks</span>
+<span class="sd">        List of peaks.</span>
+<span class="sd">    w : int</span>
+<span class="sd">        Window size.</span>
+<span class="sd">    sym : bool, optional</span>
+<span class="sd">        If True, use a symmetric window; otherwise, use an asymmetric window, by default True.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    corresponding peaks</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">lower_w</span><span class="p">,</span> <span class="n">upper_w</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">w</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">w</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span> <span class="k">if</span> <span class="n">sym</span> <span class="k">else</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">w</span><span class="p">))</span>
+    <span class="n">corr_locs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">loc</span> <span class="ow">in</span> <span class="n">peaks</span><span class="p">:</span>
+        <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">loc</span> <span class="o">-</span> <span class="n">lower_w</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="nb">min</span><span class="p">(</span><span class="n">loc</span> <span class="o">+</span> <span class="n">upper_w</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">arr</span><span class="p">))</span>
+        <span class="n">corr_locs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">l1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="n">l1</span><span class="p">:</span><span class="n">l2</span><span class="p">]))</span>
+
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">corr_locs</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="segmenting">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.basic_algos.segmenting">[docs]</a>
+<span class="k">def</span> <span class="nf">segmenting</span> <span class="p">(</span><span class="n">arr</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">window_size</span><span class="p">:</span><span class="nb">int</span><span class="p">,</span> <span class="n">overlap</span><span class="p">:</span><span class="nb">int</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Segment an array into overlapping frames.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        Input array to segment.</span>
+<span class="sd">    window_size</span>
+<span class="sd">        Size of the window.</span>
+<span class="sd">    overlap</span>
+<span class="sd">        Overlap between segments.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    frames</span>
+<span class="sd">        List of segmented frames.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">frames</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">window_size</span> <span class="o">-</span> <span class="n">overlap</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">arr</span><span class="p">),</span> <span class="n">step</span><span class="p">):</span>
+        <span class="n">frame</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="n">window_size</span><span class="p">]</span>
+        <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">frames</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+    <span class="kn">from</span> <span class="nn">vitalwave.basic_algos</span> <span class="kn">import</span> <span class="n">derivative_filter</span><span class="p">,</span> <span class="n">moving_average_filter</span>
+    <span class="kn">from</span> <span class="nn">vitalwave.example_data</span> <span class="kn">import</span> <span class="n">load_biosignal</span>
+
+    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+    <span class="n">limits</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1000</span><span class="p">]</span>
+
+    <span class="n">time</span><span class="p">,</span> <span class="n">ecg</span> <span class="o">=</span> <span class="n">load_biosignal</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">&quot;ECG&quot;</span><span class="p">)</span>
+    <span class="n">fs</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">time</span><span class="p">)))</span>
+
+    <span class="kn">from</span> <span class="nn">vitalwave.basic_algos</span> <span class="kn">import</span> <span class="n">derivative_filter</span><span class="p">,</span> <span class="n">moving_average_filter</span>
+
+    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+    <span class="n">nd_arr_derivated</span> <span class="o">=</span> <span class="n">derivative_filter</span><span class="p">(</span><span class="n">arr</span><span class="o">=</span><span class="n">ecg</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">)</span>
+    <span class="n">nd_arr_derivated</span> <span class="o">=</span> <span class="n">nd_arr_derivated</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">nd_arr_derivated</span><span class="p">)</span>  <span class="c1"># normalize</span>
+
+    <span class="n">nd_arr_dx_squared</span> <span class="o">=</span> <span class="n">nd_arr_derivated</span> <span class="o">**</span> <span class="mi">2</span>
+
+    <span class="n">nd_arr_triang</span> <span class="o">=</span> <span class="n">moving_average_filter</span><span class="p">(</span><span class="n">arr</span><span class="o">=</span><span class="n">nd_arr_dx_squared</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">fs</span> <span class="o">*</span> <span class="mf">0.15</span><span class="p">))</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">sharex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">start</span><span class="p">,</span> <span class="n">stop</span> <span class="o">=</span> <span class="n">limits</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">],</span> <span class="n">nd_arr_triang</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">])</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Peak detection&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Time [s]&#39;</span><span class="p">)</span>
+
+    <span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, MW.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

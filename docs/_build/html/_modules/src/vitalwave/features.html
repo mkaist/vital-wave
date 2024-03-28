@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>src.vitalwave.features &mdash; Vital Wave  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/plot_directive.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Vital Wave
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">Vital Wave Library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../main_content.html">Healthcare Variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../main_content.html#vital-wave-measuring-the-heart">Vital Wave - measuring the heart</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Vital Wave</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">src.vitalwave.features</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for src.vitalwave.features</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<div class="viewcode-block" id="get_ppg_peak_amplitude_ratio">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.features.get_ppg_peak_amplitude_ratio">[docs]</a>
+<span class="k">def</span> <span class="nf">get_ppg_peak_amplitude_ratio</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">feets</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">systolic_peaks</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">diastolic_peaks</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the amplitude ratio between systolic and diastolic peaks in an array.</span>
+
+<span class="sd">    amplitude_ratio = get_amplitude_ratio(arr = nd_ppg_peaks[&quot;filt_ppg_signal&quot;], feets = ppg_feets,</span>
+<span class="sd">                                      systolic_peaks=ppg_systolic, diastolic_peaks=ppg_diastolic)</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        An array containing the data.</span>
+<span class="sd">    feets</span>
+<span class="sd">        An array of indices representing the feets (or footprints) of specific events.</span>
+<span class="sd">    systolic_peaks</span>
+<span class="sd">        An array of indices representing the systolic peaks.</span>
+<span class="sd">    diastolic_peaks</span>
+<span class="sd">        An array of indices representing the diastolic peaks.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list</span>
+<span class="sd">        A list of amplitude ratios calculated as arr[systolic_peaks[index]] / arr[diastolic_peaks[index]].</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    To find the amplitude ratios of the systolic and diastolic peaks in a given signal:</span>
+
+<span class="sd">    .. plot::</span>
+<span class="sd">       :include-source:</span>
+
+<span class="sd">       from vitalwave.example_data import load_biosignal</span>
+<span class="sd">       import matplotlib.pyplot as plt</span>
+
+<span class="sd">       import numpy as np</span>
+
+<span class="sd">       limits = [0,2000]</span>
+<span class="sd">       time, ppg = load_biosignal(type=&quot;PPG&quot;)</span>
+
+<span class="sd">       fs = (1 / np.mean(np.diff(time)))</span>
+
+<span class="sd">       from vitalwave.features import get_ppg_peak_amplitude_ratio</span>
+<span class="sd">       from vitalwave.peak_detectors import msptd</span>
+
+<span class="sd">       from src.vitalwave.experimental import derive_ppg_signal_peaks</span>
+
+<span class="sd">       ppg_peaks, ppg_feets = msptd(ppg, fs=fs)</span>
+
+<span class="sd">       nd_ppg_with_peaks, nd_ppg_with_peak_types = derive_ppg_signal_peaks(arr=ppg,</span>
+<span class="sd">                                                                           ppg_peaks=ppg_peaks, ppg_feets=ppg_feets,</span>
+<span class="sd">                                                                           window_length=9, polyorder=5)</span>
+
+<span class="sd">       ppg_feets = np.asarray(np.where(nd_ppg_with_peak_types == 1.0))[0]</span>
+<span class="sd">       ppg_systolic = np.asarray(np.where(nd_ppg_with_peak_types == 2.0))[0]</span>
+<span class="sd">       ppg_diastolic = np.asarray(np.where(nd_ppg_with_peak_types == 4.0))[0]</span>
+
+<span class="sd">       l_ratio = get_ppg_peak_amplitude_ratio(arr=ppg, feets=ppg_feets, systolic_peaks=ppg_systolic,</span>
+<span class="sd">                                              diastolic_peaks=ppg_diastolic)</span>
+
+<span class="sd">       fig, ax = plt.subplots()</span>
+<span class="sd">       ax.boxplot(l_ratio)</span>
+<span class="sd">       plt.show()</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ratio</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">feets</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+        <span class="n">amplitude_ratio</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[</span><span class="n">systolic_peaks</span><span class="p">[</span><span class="n">index</span><span class="p">]]</span> <span class="o">/</span> <span class="n">arr</span><span class="p">[</span><span class="n">diastolic_peaks</span><span class="p">[</span><span class="n">index</span><span class="p">]]</span>
+        <span class="n">ratio</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">amplitude_ratio</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ratio</span></div>
+
+
+
+<div class="viewcode-block" id="get_ppg_peak_integral_ratio">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.features.get_ppg_peak_integral_ratio">[docs]</a>
+<span class="k">def</span> <span class="nf">get_ppg_peak_integral_ratio</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">feets</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">dicrotic_valley</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">problems</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the integral ratio between systolic and diastolic intervals in an array.</span>
+
+<span class="sd">    integrals = get_integral_ratio(arr = nd_ppg_peaks[&quot;filt_ppg_signal&quot;], feets = ppg_feets,</span>
+<span class="sd">                                   dicrotic_valley = ppg_dicrotic, problems = [121])</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        An array containing the data.</span>
+<span class="sd">    feets</span>
+<span class="sd">        An array of indices representing the feets (or footprints) of specific events.</span>
+<span class="sd">    dicrotic_valley</span>
+<span class="sd">        An array of indices representing the dicrotic valleys.</span>
+<span class="sd">    problems</span>
+<span class="sd">        An array of indices representing problematic data points to be excluded from calculations.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list</span>
+<span class="sd">        A list of integral ratios calculated as the volume of systolic to diastolic peak.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    To find the volume-ratios of the systolic and diastolic peaks in a given signal:</span>
+
+<span class="sd">    .. plot::</span>
+<span class="sd">       :include-source:</span>
+
+<span class="sd">       from vitalwave.example_data import load_biosignal</span>
+<span class="sd">       import matplotlib.pyplot as plt</span>
+
+<span class="sd">       import numpy as np</span>
+
+<span class="sd">       limits = [0,2000]</span>
+<span class="sd">       time, ppg = load_biosignal(type=&quot;PPG&quot;)</span>
+
+<span class="sd">       fs = (1 / np.mean(np.diff(time)))</span>
+
+<span class="sd">       from src.vitalwave.features import get_ppg_peak_integral_ratio</span>
+
+<span class="sd">       from vitalwave.peak_detectors import msptd</span>
+<span class="sd">       from src.vitalwave.experimental import derive_ppg_signal_peaks</span>
+
+<span class="sd">       ppg_peaks, ppg_feets = msptd(ppg, fs=fs)</span>
+
+<span class="sd">       nd_ppg_with_peaks, nd_ppg_with_peak_types = derive_ppg_signal_peaks(arr=ppg,</span>
+<span class="sd">                                                                           ppg_peaks=ppg_peaks, ppg_feets=ppg_feets,</span>
+<span class="sd">                                                                           window_length=9, polyorder=5)</span>
+
+<span class="sd">       ppg_feets = np.asarray(np.where(nd_ppg_with_peak_types == 1.0))[0]</span>
+<span class="sd">       ppg_dicrotic = np.asarray(np.where(nd_ppg_with_peak_types == 3.0))[0]</span>
+
+<span class="sd">       l_ratio = get_ppg_peak_integral_ratio(arr=ppg, feets=ppg_feets,</span>
+<span class="sd">                                             dicrotic_valley=ppg_dicrotic, problems=[121])</span>
+
+<span class="sd">       fig, ax = plt.subplots()</span>
+<span class="sd">       ax.boxplot(l_ratio)</span>
+<span class="sd">       plt.show()</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">feets</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">feets</span><span class="p">,</span> <span class="n">problems</span><span class="p">)</span>
+
+    <span class="n">volumes</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">feets</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">systolic_integral</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="n">feets</span><span class="p">[</span><span class="n">index</span><span class="p">]:</span><span class="n">dicrotic_valley</span><span class="p">[</span><span class="n">index</span><span class="p">]])</span>
+            <span class="n">diastolic_integral</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="n">dicrotic_valley</span><span class="p">[</span><span class="n">index</span><span class="p">]:</span><span class="n">feets</span><span class="p">[</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]])</span>
+
+            <span class="n">volumes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">systolic_integral</span><span class="o">/</span><span class="n">diastolic_integral</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+    <span class="k">return</span> <span class="n">volumes</span></div>
+
+
+
+<div class="viewcode-block" id="get_egc_interval_q_s">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.features.get_egc_interval_q_s">[docs]</a>
+<span class="k">def</span> <span class="nf">get_egc_interval_q_s</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">q_points</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">s_points</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span><span class="nb">int</span> <span class="o">=</span> <span class="mi">200</span><span class="p">,</span> <span class="n">max_len</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">threshold</span> <span class="o">=</span> <span class="mf">0.0001</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the time intervals between Q and S points in an ECG signal.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        ECG signal</span>
+<span class="sd">    q_points</span>
+<span class="sd">        A list of indices representing the Q points in the ECG signal.</span>
+<span class="sd">    s_points</span>
+<span class="sd">        A list of indices representing the S points in the ECG signal.</span>
+<span class="sd">    fs</span>
+<span class="sd">        The sampling frequency of the ECG signal in Hz. Default is 200 Hz.</span>
+<span class="sd">    max_len : int, optional</span>
+<span class="sd">        Scroll-distance to discover the valleys. Default is 50.</span>
+<span class="sd">    threshold : float, optional</span>
+<span class="sd">        The threshold for identifying valleys. Default is 0.0001.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list</span>
+<span class="sd">        A list of time intervals in seconds between the Q and S points in the ECG signal.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    To find the interval between q and s-peak ratios in a given signal:</span>
+
+<span class="sd">    .. plot::</span>
+<span class="sd">       :include-source:</span>
+
+<span class="sd">       from vitalwave.example_data import load_biosignal</span>
+<span class="sd">       import matplotlib.pyplot as plt</span>
+
+<span class="sd">       import numpy as np</span>
+
+<span class="sd">       limits = [0,2000]</span>
+<span class="sd">       time, ecg = load_biosignal(type=&quot;ECG&quot;)</span>
+
+<span class="sd">       fs = (1 / np.mean(np.diff(time)))</span>
+
+<span class="sd">       from src.vitalwave.features import get_egc_interval_q_s</span>
+<span class="sd">       from src.vitalwave import peak_detectors</span>
+<span class="sd">       from src.vitalwave.experimental import get_ecg_signal_peaks</span>
+
+<span class="sd">       ecg_r_peaks = peak_detectors.ecg_modified_pan_tompkins(ecg, fs)</span>
+
+<span class="sd">       nd_ecg_with_peaks, nd_ecg_with_peak_types = get_ecg_signal_peaks(arr=ecg, r_peaks=ecg_r_peaks,</span>
+<span class="sd">                                                                        fs=fs)</span>
+
+<span class="sd">       egc_q_notch = np.asarray(np.where(nd_ecg_with_peak_types == 2.0))[0]</span>
+<span class="sd">       egc_s_notch = np.asarray(np.where(nd_ecg_with_peak_types == 4.0))[0]</span>
+
+<span class="sd">       interval = get_egc_interval_q_s(arr=ecg, q_points=egc_q_notch, s_points=egc_s_notch)</span>
+
+<span class="sd">       fig, ax = plt.subplots()</span>
+<span class="sd">       ax.boxplot(interval)</span>
+<span class="sd">       plt.show()</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ratio</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">q</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">zip</span> <span class="p">(</span><span class="n">q_points</span><span class="p">,</span> <span class="n">s_points</span><span class="p">):</span>
+
+        <span class="n">q_drift</span> <span class="o">=</span> <span class="n">_get_local_valley</span><span class="p">(</span><span class="n">arr</span><span class="o">=-</span><span class="n">arr</span><span class="p">[:</span><span class="n">q</span><span class="p">],</span> <span class="n">direction</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">,</span> <span class="n">max_len</span><span class="o">=</span><span class="n">max_len</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">)</span>
+        <span class="n">s_drift</span> <span class="o">=</span> <span class="n">_get_local_valley</span><span class="p">(</span><span class="n">arr</span><span class="o">=-</span><span class="n">arr</span><span class="p">[</span><span class="n">s</span><span class="p">:],</span> <span class="n">direction</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">,</span> <span class="n">max_len</span><span class="o">=</span><span class="n">max_len</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">q_drift</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;q valley not found&quot;</span><span class="p">)</span>
+            <span class="n">q_drift</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="n">s_drift</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;t valley not found&quot;</span><span class="p">)</span>
+            <span class="n">s_drift</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">in_seconds</span> <span class="o">=</span> <span class="p">((</span><span class="n">s</span> <span class="o">+</span> <span class="n">s_drift</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">q</span> <span class="o">-</span> <span class="n">q_drift</span><span class="p">))</span> <span class="o">/</span> <span class="n">fs</span>
+        <span class="n">ratio</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">in_seconds</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ratio</span></div>
+
+
+
+<div class="viewcode-block" id="get_egc_interval_p_t">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.features.get_egc_interval_p_t">[docs]</a>
+<span class="k">def</span> <span class="nf">get_egc_interval_p_t</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">p_points</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">t_points</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span><span class="nb">int</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">max_len</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">threshold</span> <span class="o">=</span> <span class="mf">0.0001</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the time intervals between Q and T points in an ECG signal.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        ECG signal</span>
+<span class="sd">    p_points</span>
+<span class="sd">        A list of indices representing the P points in the ECG signal.</span>
+<span class="sd">    t_points</span>
+<span class="sd">        A list of indices representing the T points in the ECG signal.</span>
+<span class="sd">    fs </span>
+<span class="sd">        The sampling frequency of the ECG signal in Hz. Default is 200 Hz.</span>
+<span class="sd">    max_len : int, optional</span>
+<span class="sd">        Scroll-distance to discover the valleys. Default is 50.</span>
+<span class="sd">    threshold : float, optional</span>
+<span class="sd">        The threshold for identifying valleys. Default is 0.0001.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list</span>
+<span class="sd">        A list of time intervals in seconds between the Q and T points in the ECG signal.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    To find the interval between p and t-peaks ratios in a given signal:</span>
+
+<span class="sd">    .. plot::</span>
+<span class="sd">       :include-source:</span>
+
+<span class="sd">       from vitalwave.example_data import load_biosignal</span>
+<span class="sd">       import matplotlib.pyplot as plt</span>
+
+<span class="sd">       import numpy as np</span>
+
+<span class="sd">       limits = [0,2000]</span>
+<span class="sd">       time, ecg = load_biosignal(type=&quot;ECG&quot;)</span>
+
+<span class="sd">       fs = (1 / np.mean(np.diff(time)))</span>
+
+<span class="sd">       from src.vitalwave.features import get_egc_interval_p_t</span>
+<span class="sd">       from src.vitalwave import peak_detectors</span>
+<span class="sd">       from src.vitalwave.experimental import get_ecg_signal_peaks</span>
+
+<span class="sd">       ecg_r_peaks = peak_detectors.ecg_modified_pan_tompkins(ecg, fs)</span>
+
+<span class="sd">       nd_ecg_with_peaks, nd_ecg_with_peak_types = get_ecg_signal_peaks(arr=ecg, r_peaks=ecg_r_peaks,</span>
+<span class="sd">                                                                        fs=fs)</span>
+
+<span class="sd">       egc_p_peaks = np.asarray(np.where(nd_ecg_with_peak_types == 1.0))[0]</span>
+<span class="sd">       egc_t_peaks = np.asarray(np.where(nd_ecg_with_peak_types == 5.0))[0]</span>
+
+<span class="sd">       interval = get_egc_interval_p_t(arr=ecg, p_points=egc_p_peaks, t_points=egc_t_peaks)</span>
+
+<span class="sd">       fig, ax = plt.subplots()</span>
+<span class="sd">       ax.boxplot(interval)</span>
+<span class="sd">       plt.show()</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ratio</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">p_points</span><span class="p">,</span> <span class="n">t_points</span><span class="p">):</span>
+        <span class="n">p_drift</span> <span class="o">=</span> <span class="n">_get_local_valley</span><span class="p">(</span><span class="n">arr</span><span class="o">=</span><span class="n">arr</span><span class="p">[:</span><span class="n">p</span><span class="p">],</span> <span class="n">direction</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">,</span> <span class="n">max_len</span><span class="o">=</span><span class="n">max_len</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">)</span>
+        <span class="n">t_drift</span> <span class="o">=</span> <span class="n">_get_local_valley</span><span class="p">(</span><span class="n">arr</span><span class="o">=</span><span class="n">arr</span><span class="p">[</span><span class="n">t</span><span class="p">:],</span> <span class="n">direction</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">,</span> <span class="n">max_len</span><span class="o">=</span><span class="n">max_len</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">p_drift</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;q valley not found&quot;</span><span class="p">)</span>
+            <span class="n">p_drift</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="n">t_drift</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;t valley not found&quot;</span><span class="p">)</span>
+            <span class="n">t_drift</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">in_seconds</span> <span class="o">=</span> <span class="p">((</span><span class="n">t</span> <span class="o">+</span> <span class="n">t_drift</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">p</span> <span class="o">-</span> <span class="n">p_drift</span><span class="p">))</span> <span class="o">/</span> <span class="n">fs</span>
+        <span class="n">ratio</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">in_seconds</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ratio</span></div>
+
+
+<div class="viewcode-block" id="get_egc_interval_q_t">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.features.get_egc_interval_q_t">[docs]</a>
+<span class="k">def</span> <span class="nf">get_egc_interval_q_t</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">q_points</span><span class="p">,</span> <span class="n">t_points</span><span class="p">,</span> <span class="n">fs</span> <span class="o">=</span> <span class="mi">200</span><span class="p">,</span> <span class="n">max_len</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">threshold</span> <span class="o">=</span> <span class="mf">0.0001</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the time intervals between Q and T points in an ECG signal.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        ECG signal</span>
+<span class="sd">    q_points</span>
+<span class="sd">        A list of indices representing the Q points in the ECG signal.</span>
+<span class="sd">    t_points</span>
+<span class="sd">        A list of indices representing the T points in the ECG signal.</span>
+<span class="sd">    fs</span>
+<span class="sd">        The sampling frequency of the ECG signal in Hz. Default is 200 Hz.</span>
+<span class="sd">    max_len : int, optional</span>
+<span class="sd">        Scroll-distance to discover the valleys. Default is 50.</span>
+<span class="sd">    threshold : float, optional</span>
+<span class="sd">        The threshold for identifying valleys. Default is 0.0001.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list</span>
+<span class="sd">        A list of time intervals in seconds between the Q and T points in the ECG signal.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    To find the interval between q and t-peaks ratios in a given signal:</span>
+
+<span class="sd">    .. plot::</span>
+<span class="sd">       :include-source:</span>
+
+<span class="sd">       from vitalwave.example_data import load_biosignal</span>
+<span class="sd">       import matplotlib.pyplot as plt</span>
+
+<span class="sd">       import numpy as np</span>
+
+<span class="sd">       limits = [0,2000]</span>
+<span class="sd">       time, ecg = load_biosignal(type=&quot;ECG&quot;)</span>
+
+<span class="sd">       fs = (1 / np.mean(np.diff(time)))</span>
+
+<span class="sd">       from src.vitalwave.features import get_egc_interval_q_t</span>
+<span class="sd">       from vitalwave import peak_detectors</span>
+<span class="sd">       from src.vitalwave.experimental import get_ecg_signal_peaks</span>
+
+<span class="sd">       ecg_r_peaks = peak_detectors.ecg_modified_pan_tompkins(ecg, fs)</span>
+
+<span class="sd">       nd_ecg_with_peaks, nd_ecg_with_peak_types = get_ecg_signal_peaks(arr=ecg, r_peaks=ecg_r_peaks, fs=fs)</span>
+
+<span class="sd">       egc_q_peaks = np.asarray(np.where(nd_ecg_with_peak_types == 2.0))[0]</span>
+<span class="sd">       egc_t_peaks = np.asarray(np.where(nd_ecg_with_peak_types == 5.0))[0]</span>
+
+<span class="sd">       interval = get_egc_interval_q_t(arr=ecg, q_points=egc_q_peaks, t_points=egc_t_peaks)</span>
+
+<span class="sd">       fig, ax = plt.subplots()</span>
+<span class="sd">       ax.boxplot(interval)</span>
+<span class="sd">       plt.show()</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ratio</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">q</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">zip</span> <span class="p">(</span><span class="n">q_points</span><span class="p">,</span> <span class="n">t_points</span><span class="p">):</span>
+        <span class="n">q_drift</span> <span class="o">=</span> <span class="n">_get_local_valley</span><span class="p">(</span><span class="n">arr</span> <span class="o">=</span> <span class="o">-</span><span class="n">arr</span><span class="p">[:</span><span class="n">q</span><span class="p">],</span> <span class="n">direction</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">,</span> <span class="n">max_len</span><span class="o">=</span><span class="n">max_len</span><span class="p">,</span> <span class="n">threshold</span> <span class="o">=</span> <span class="n">threshold</span><span class="p">)</span>
+        <span class="n">t_drift</span> <span class="o">=</span> <span class="n">_get_local_valley</span><span class="p">(</span><span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[</span><span class="n">t</span><span class="p">:],</span> <span class="n">direction</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">,</span> <span class="n">max_len</span><span class="o">=</span><span class="n">max_len</span><span class="p">,</span> <span class="n">threshold</span> <span class="o">=</span> <span class="n">threshold</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">q_drift</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;q valley not found&quot;</span><span class="p">)</span>
+            <span class="n">q_drift</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="n">t_drift</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;t valley not found&quot;</span><span class="p">)</span>
+            <span class="n">t_drift</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">in_seconds</span> <span class="o">=</span> <span class="p">((</span><span class="n">t</span> <span class="o">+</span> <span class="n">t_drift</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">q</span> <span class="o">-</span> <span class="n">q_drift</span><span class="p">))</span> <span class="o">/</span> <span class="n">fs</span>
+        <span class="n">ratio</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">in_seconds</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ratio</span></div>
+
+
+
+<div class="viewcode-block" id="compute_meandist">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.features.compute_meandist">[docs]</a>
+<span class="k">def</span> <span class="nf">compute_meandist</span><span class="p">(</span><span class="n">diff_rri</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Computes the mean distance between successive elements in a given time series.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    diff_rri</span>
+<span class="sd">        he input time series data representing the successive differences of R-R intervals.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    float:</span>
+<span class="sd">        The calculated mean distance value.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dist</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">diff_rri</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">dist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">([</span><span class="n">diff_rri</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">diff_rri</span><span class="p">[</span><span class="n">i</span><span class="p">]]))</span>
+    <span class="n">mean_distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">dist</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">mean_distance</span></div>
+
+
+
+<div class="viewcode-block" id="get_global_egc_features">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.features.get_global_egc_features">[docs]</a>
+<span class="k">def</span> <span class="nf">get_global_egc_features</span><span class="p">(</span><span class="n">r_peaks</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span><span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span> <span class="n">min_rr_interval</span><span class="p">:</span><span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate global ECG (Electrocardiogram) features from R-peak indices.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    r_peaks</span>
+<span class="sd">        List of R-peak indices in the ECG signal.</span>
+<span class="sd">    fs</span>
+<span class="sd">        Sampling frequency of the ECG signal in Hz.</span>
+<span class="sd">    min_rr_interval</span>
+<span class="sd">        Minimum RR interval in milliseconds, used for computing pNNxx.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    object</span>
+<span class="sd">        containing scalar variables</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">global_features</span> <span class="o">=</span> <span class="n">_Global_EGC_Features</span><span class="p">(</span><span class="n">r_peaks</span> <span class="o">=</span> <span class="n">r_peaks</span><span class="p">,</span> <span class="n">fs</span> <span class="o">=</span> <span class="n">fs</span><span class="p">,</span> <span class="n">min_rr_interval</span> <span class="o">=</span> <span class="n">min_rr_interval</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">global_features</span></div>
+
+
+
+<span class="k">class</span> <span class="nc">_Global_EGC_Features</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r_peaks</span><span class="p">,</span> <span class="n">fs</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span> <span class="n">min_rr_interval</span> <span class="o">=</span> <span class="mi">50</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        rmssd            = Root Mean Square of Successive Differences</span>
+<span class="sd">        mean_rr_interval = Mean RR Interval</span>
+<span class="sd">        sdnn             = Standard Deviation of NN Intervals</span>
+<span class="sd">        mean_heart_rate  = Mean Heart Rate</span>
+<span class="sd">        std_heart_rate   = Standard Deviation of Heart Rate</span>
+<span class="sd">        nn_xx            = Number of RR Intervals &gt; xx ms</span>
+<span class="sd">        pnn_xx           = pNN50: Percentage of NN50 of all RR intervals</span>
+<span class="sd">        corr_heart_rate  = Standard Deviation of Heart Rate</span>
+<span class="sd">        min_heart_rate   = Minimum Heart Rate</span>
+<span class="sd">        max_heart_rate   = Maximum Heart Rate</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        r_peaks</span>
+<span class="sd">        fs</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ecg_r_peak_indices</span> <span class="o">=</span> <span class="n">r_peaks</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">heart_rate</span> <span class="o">=</span> <span class="p">(</span><span class="n">fs</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">ecg_r_peak_indices</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">root_mean_square_of_successive_differences</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ecg_r_peak_indices</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean_rr_interval</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ecg_r_peak_indices</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sdnn</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ecg_r_peak_indices</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean_heart_rate</span> <span class="o">=</span> <span class="mi">60</span> <span class="o">*</span> <span class="n">fs</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ecg_r_peak_indices</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">std_heart_rate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">heart_rate</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">nn_xx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ecg_r_peak_indices</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">min_rr_interval</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pnn_xx</span> <span class="o">=</span> <span class="n">fs</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">nn_xx</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ecg_r_peak_indices</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_heart_rate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">heart_rate</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_heart_rate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">heart_rate</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;HRV and Heart Rate Statistics:</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;RMSSD: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">root_mean_square_of_successive_differences</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Mean RR Interval: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mean_rr_interval</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;SDNN: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">sdnn</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Mean Heart Rate: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mean_heart_rate</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Standard Deviation of Heart Rate: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">std_heart_rate</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;NNxx: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">nn_xx</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;pNNxx: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">pnn_xx</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Minimum Heart Rate: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">min_heart_rate</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Maximum Heart Rate: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">max_heart_rate</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_get_local_valley</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">,</span> <span class="n">direction</span> <span class="o">=</span> <span class="s2">&quot;right&quot;</span><span class="p">,</span> <span class="n">max_len</span> <span class="o">=</span> <span class="mi">100</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Find the index of the first local valley - a point where the gradient changes from decreasing to increasing.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    -----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        The input array or list of values.</span>
+<span class="sd">    threshold</span>
+<span class="sd">        The threshold for gradient magnitude. Default is 0.01.</span>
+<span class="sd">    direction</span>
+<span class="sd">        The search direction; left or right. Left to search backwards.</span>
+<span class="sd">    max_len</span>
+<span class="sd">        The maximum length of the array to consider. Default is 100.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    --------</span>
+<span class="sd">    int or None:</span>
+<span class="sd">        Index of the first local valley, or None if no suitable valley is found.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s2">&quot;left&quot;</span><span class="p">:</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span>
+
+    <span class="n">gradients</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">arr</span><span class="p">[:</span><span class="n">max_len</span><span class="p">])</span>
+
+    <span class="k">for</span> <span class="n">count</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">gradients</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">gradients</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">threshold</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="p">(</span><span class="n">gradients</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">threshold</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">gradients</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="n">gradients</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]:</span>
+                <span class="k">return</span> <span class="n">count</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, MW.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

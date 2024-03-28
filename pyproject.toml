@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vitalwave"
+version = "0.0.1"
+authors = [
+  { name="Markus Walden", email="markus.a.walden@utu.fi" },
+]
+description = "Biosignal utility package"
+readme = "README.md"
+requires-python = ">=3.10.0"
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+#dependencies = [
+#    "NumPy >= 1.25",
+#    "PyWavelets >= 1.3.0",
+#    "scipy >= 1.7.3"
+#]
+
+[project.urls]
+"Homepage" = "https://github.com/Antonius-Markus/bio_library"
+
+[tool.setuptools.packages.find]
+namespaces = true
+where = ["src"]
+
+[tool.setuptools.package-data]
+"vitalwave.example_data" = ["*.npy"]

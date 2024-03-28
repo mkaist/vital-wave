@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>src.vitalwave.experimental &mdash; Vital Wave  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/plot_directive.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Vital Wave
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">Vital Wave Library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../main_content.html">Healthcare Variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../main_content.html#vital-wave-measuring-the-heart">Vital Wave - measuring the heart</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Vital Wave</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">src.vitalwave.experimental</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for src.vitalwave.experimental</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">vitalwave</span> <span class="kn">import</span> <span class="n">basic_algos</span>
+<span class="kn">from</span> <span class="nn">vitalwave.peak_detectors</span> <span class="kn">import</span> <span class="n">ampd</span>
+
+<span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="kn">import</span> <span class="n">find_peaks</span><span class="p">,</span> <span class="n">savgol_filter</span>
+<span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="kn">import</span> <span class="n">argrelextrema</span><span class="p">,</span> <span class="n">windows</span>
+
+
+<div class="viewcode-block" id="get_ecg_signal_peaks">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.experimental.get_ecg_signal_peaks">[docs]</a>
+<span class="k">def</span> <span class="nf">get_ecg_signal_peaks</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">r_peaks</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span><span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extracts and categorizes ECG signal peaks, including R, P, Q, S, and T peaks.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    ecg_signal</span>
+<span class="sd">        array representing the ECG signal.</span>
+<span class="sd">    r_peaks</span>
+<span class="sd">        array containing R-peak locations in samples.</span>
+<span class="sd">    fs</span>
+<span class="sd">        Sampling frequency of the ECG signal.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    nd_ecg_with_peaks</span>
+<span class="sd">        binary array indicating the presence of identified peaks in the ECG signal.</span>
+<span class="sd">    nd_ecg_with_peak_types</span>
+<span class="sd">        array categorizing the identified peaks in the ECG signal:</span>
+<span class="sd">        - 1: P-peak</span>
+<span class="sd">        - 2: Q-peak</span>
+<span class="sd">        - 3: R-peak</span>
+<span class="sd">        - 4: S-peak</span>
+<span class="sd">        - 5: T-peak</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    To find the r-peaks of ECG in a given signal:</span>
+
+<span class="sd">    .. plot::</span>
+<span class="sd">       :include-source:</span>
+
+<span class="sd">       from vitalwave.example_data import load_biosignal</span>
+<span class="sd">       import matplotlib.pyplot as plt</span>
+
+<span class="sd">       import numpy as np</span>
+
+<span class="sd">       limits = [0,2000]</span>
+<span class="sd">       time, ecg = load_biosignal(type=&quot;ECG&quot;)</span>
+
+<span class="sd">       fs = (1 / np.mean(np.diff(time)))</span>
+
+<span class="sd">       from vitalwave import peak_detectors</span>
+<span class="sd">       from vitalwave.experimental import get_ecg_signal_peaks</span>
+
+<span class="sd">       ecg_r_peaks = peak_detectors.ecg_modified_pan_tompkins(ecg, fs)</span>
+<span class="sd">       heights_peaks = ecg[ecg_r_peaks]</span>
+
+<span class="sd">       plt.figure(figsize=(10, 5))</span>
+<span class="sd">       plt.plot(ecg)</span>
+<span class="sd">       plt.scatter(ecg_r_peaks, heights_peaks, marker=&#39;o&#39;, color=&#39;green&#39;)</span>
+
+<span class="sd">       plt.show()</span>
+
+<span class="sd">       nd_ecg_with_peaks, nd_ecg_with_peak_types = get_ecg_signal_peaks(arr=ecg, r_peaks=ecg_r_peaks,</span>
+<span class="sd">                                                                        fs=fs)</span>
+
+<span class="sd">       plt.figure(figsize=(10, 5))</span>
+<span class="sd">       plt.plot(ecg)</span>
+
+<span class="sd">       ecg_peaks = np.where(nd_ecg_with_peaks == 1.0)[0]</span>
+<span class="sd">       heights_peaks = ecg[ecg_peaks]</span>
+
+<span class="sd">       plt.scatter(ecg_peaks, heights_peaks, marker=&#39;o&#39;, color=&#39;green&#39;)</span>
+<span class="sd">       plt.show()</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Extract waveforms and initial peaks</span>
+    <span class="n">ecg_hilbert</span> <span class="o">=</span> <span class="n">basic_algos</span><span class="o">.</span><span class="n">homomorphic_hilbert_envelope</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">fs</span><span class="p">)</span>
+
+    <span class="n">waveforms_ecg</span><span class="p">,</span> <span class="n">mean_waveform_ecg</span> <span class="o">=</span> <span class="n">basic_algos</span><span class="o">.</span><span class="n">extract_waveforms</span><span class="p">(</span><span class="n">ecg_hilbert</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">r_peaks</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span>
+                                                         <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;nn_interval&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Identify peaks in waveforms</span>
+    <span class="n">cumulative_ecg_peaks</span><span class="p">,</span> <span class="n">initial_peaks_ecg_types</span><span class="p">,</span> <span class="n">waveforms_with_error</span>  <span class="o">=</span> <span class="n">_identify_peaks_in_waveform</span><span class="p">(</span><span class="n">waveforms_ecg</span><span class="p">,</span>
+                                                                                                       <span class="n">get_bad_indexes</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Process identified peaks and types</span>
+    <span class="n">ecg_signal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">waveforms_ecg</span><span class="p">)</span>
+    <span class="n">ecg_signal</span> <span class="o">=</span> <span class="n">ecg_signal</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">ecg_signal</span><span class="p">)]</span>
+
+    <span class="n">ecg_peaks_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">cumulative_ecg_peaks</span><span class="p">)</span>
+    <span class="n">ecg_peaks_all_types</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">initial_peaks_ecg_types</span><span class="p">)</span>
+
+    <span class="n">nd_ecg_with_peaks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">ecg_signal</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">nd_ecg_with_peak_types</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">ecg_signal</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+    <span class="n">nd_ecg_with_peaks</span><span class="p">[</span><span class="n">ecg_peaks_all</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">peak</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ecg_peaks_all</span><span class="p">):</span>
+        <span class="n">nd_ecg_with_peak_types</span><span class="p">[</span><span class="n">peak</span><span class="p">]</span> <span class="o">=</span> <span class="n">ecg_peaks_all_types</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+
+    <span class="c1"># Count R-peaks and adjust peak arrays</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">nd_ecg_with_peak_types</span> <span class="o">==</span> <span class="mi">3</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">r_peaks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">r_peaks</span><span class="p">,</span> <span class="n">waveforms_with_error</span><span class="p">)</span>
+    <span class="n">r_peaks</span> <span class="o">=</span> <span class="n">r_peaks</span><span class="p">[:</span><span class="n">count</span><span class="p">]</span>
+
+    <span class="n">t_peak</span> <span class="o">=</span> <span class="n">r_peaks</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">nd_ecg_with_peak_types</span> <span class="o">==</span> <span class="mi">5</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">nd_ecg_with_peak_types</span> <span class="o">==</span> <span class="mi">3</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">p_peak</span> <span class="o">=</span> <span class="n">r_peaks</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">nd_ecg_with_peak_types</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">nd_ecg_with_peak_types</span> <span class="o">==</span> <span class="mi">3</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="c1"># Find P, Q, S, and T peaks</span>
+    <span class="n">nd_ecg_with_peaks</span><span class="p">,</span> <span class="n">nd_ecg_with_peak_types</span> <span class="o">=</span> <span class="n">_find_p_q_s_t</span><span class="p">(</span><span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="p">,</span> <span class="n">r_peaks</span><span class="o">=</span><span class="n">r_peaks</span><span class="p">,</span>
+                                                              <span class="n">t_peaks</span><span class="o">=</span><span class="n">t_peak</span><span class="p">,</span> <span class="n">p_peaks</span><span class="o">=</span><span class="n">p_peak</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">nd_ecg_with_peaks</span><span class="p">,</span> <span class="n">nd_ecg_with_peak_types</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">_find_p_q_s_t</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">r_peaks</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">t_peaks</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">p_peaks</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span><span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Identifies P, Q, S, and T peaks in an ECG signal and categorizes their types.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        array representing the ECG signal.</span>
+<span class="sd">    r_peaks</span>
+<span class="sd">        array containing the R-peak locations in the ECG signal.</span>
+<span class="sd">    t_peaks</span>
+<span class="sd">        array containing the T-peak locations in the ECG signal.</span>
+<span class="sd">    p_peaks</span>
+<span class="sd">        array containing the P-peak locations in the ECG signal.</span>
+<span class="sd">    window</span>
+<span class="sd">        Half of the window size used for peak identification around P and T peaks, by default 3.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    nd_ecg_with_peaks</span>
+<span class="sd">        binary array indicating the presence of identified peaks in the ECG signal.</span>
+<span class="sd">    nd_ecg_with_peak_types</span>
+<span class="sd">        array categorizing the identified peaks in the ECG signal:</span>
+<span class="sd">        - 1: P-peak</span>
+<span class="sd">        - 2: Q-peak</span>
+<span class="sd">        - 3: R-peak</span>
+<span class="sd">        - 4: S-peak</span>
+<span class="sd">        - 5: T-peak</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">nd_ecg_with_peaks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">nd_ecg_with_peak_types</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span> <span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">p_peaks</span><span class="p">,</span> <span class="n">r_peaks</span><span class="p">,</span> <span class="n">t_peaks</span><span class="p">)):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">nd_ecg_with_peaks</span><span class="p">[(</span><span class="n">p</span><span class="o">-</span><span class="n">window</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">arr</span><span class="p">[(</span><span class="n">p</span><span class="o">-</span><span class="n">window</span><span class="p">):(</span><span class="n">p</span><span class="o">+</span><span class="n">window</span><span class="p">)]))]</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">nd_ecg_with_peak_types</span><span class="p">[(</span><span class="n">p</span><span class="o">-</span><span class="n">window</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">arr</span><span class="p">[(</span><span class="n">p</span><span class="o">-</span><span class="n">window</span><span class="p">):(</span><span class="n">p</span><span class="o">+</span><span class="n">window</span><span class="p">)]))]</span> <span class="o">=</span> <span class="mi">1</span>
+
+            <span class="n">nd_ecg_with_peaks</span><span class="p">[</span><span class="n">p</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="n">p</span><span class="p">:</span><span class="n">r</span><span class="p">]))]</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">nd_ecg_with_peak_types</span><span class="p">[</span><span class="n">p</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="n">p</span><span class="p">:</span><span class="n">r</span><span class="p">]))]</span> <span class="o">=</span> <span class="mi">2</span>
+
+            <span class="n">nd_ecg_with_peaks</span><span class="p">[</span><span class="n">r</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">nd_ecg_with_peak_types</span><span class="p">[</span><span class="n">r</span><span class="p">]</span> <span class="o">=</span> <span class="mi">3</span>
+
+            <span class="n">nd_ecg_with_peaks</span><span class="p">[</span><span class="n">r</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="n">r</span><span class="p">:</span><span class="n">t</span><span class="p">]))]</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">nd_ecg_with_peak_types</span><span class="p">[</span><span class="n">r</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="n">r</span><span class="p">:</span><span class="n">t</span><span class="p">]))]</span> <span class="o">=</span> <span class="mi">4</span>
+
+            <span class="n">nd_ecg_with_peaks</span><span class="p">[(</span><span class="n">t</span><span class="o">-</span><span class="n">window</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">arr</span><span class="p">[(</span><span class="n">t</span><span class="o">-</span><span class="n">window</span><span class="p">):(</span><span class="n">t</span><span class="o">+</span><span class="n">window</span><span class="p">)])]</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">nd_ecg_with_peak_types</span><span class="p">[(</span><span class="n">t</span><span class="o">-</span><span class="n">window</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">arr</span><span class="p">[(</span><span class="n">t</span><span class="o">-</span><span class="n">window</span><span class="p">):(</span><span class="n">t</span><span class="o">+</span><span class="n">window</span><span class="p">)])]</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+    <span class="k">return</span> <span class="n">nd_ecg_with_peaks</span><span class="p">,</span> <span class="n">nd_ecg_with_peak_types</span>
+
+
+<span class="k">def</span> <span class="nf">_identify_peaks_in_waveform</span><span class="p">(</span><span class="n">waveforms_ecg</span><span class="p">,</span> <span class="n">get_bad_indexes</span><span class="p">:</span><span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Identifies peaks in ECG waveforms and categorizes their types.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    waveforms_ecg</span>
+<span class="sd">        List of ECG waveforms for peak identification.</span>
+<span class="sd">    get_bad_indexes</span>
+<span class="sd">        Flag to indicate whether to return indexes of waveforms with errors, by default False.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    cumulative_ecg_peaks</span>
+<span class="sd">        List of cumulative peak locations for all waveforms, categorized by types.</span>
+<span class="sd">    initial_peaks_ecg_types</span>
+<span class="sd">        List of peak type categorizations corresponding to initial_peaks_ecg.</span>
+<span class="sd">    waveforms_with_error</span>
+<span class="sd">        List of indexes of waveforms with missing points or errors (if get_bad_indexes is True).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">initial_peaks_ecg_types</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">cumulative_ecg_peaks</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">waveforms_with_error</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">idx_peak_ids</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">waveform</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">waveforms_ecg</span><span class="p">):</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">waveform</span> <span class="o">=</span> <span class="n">waveform</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">waveform</span><span class="p">)]</span>
+            <span class="n">r_peak</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">waveform</span><span class="p">)</span>
+
+            <span class="n">peaks_ecg_high</span> <span class="o">=</span> <span class="n">argrelextrema</span><span class="p">(</span><span class="n">waveform</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">greater</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">peaks_ecg_low</span> <span class="o">=</span> <span class="n">argrelextrema</span><span class="p">(</span><span class="n">waveform</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">less</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="n">initial_peaks_ecg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">peaks_ecg_high</span><span class="p">,</span> <span class="n">peaks_ecg_low</span><span class="p">)))</span>
+
+            <span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">initial_peaks_ecg</span><span class="p">)</span> <span class="o">-</span> <span class="n">r_peak</span><span class="p">))</span><span class="o">.</span><span class="n">argmin</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">idx</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="ow">and</span> <span class="p">(</span><span class="n">initial_peaks_ecg</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">idx</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="n">nd_peak_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">initial_peaks_ecg</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+                <span class="n">nd_peak_type</span><span class="p">[</span><span class="n">idx</span> <span class="o">-</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="n">nd_peak_type</span><span class="p">[</span><span class="n">idx</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+                <span class="n">nd_peak_type</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">3</span>
+                <span class="n">nd_peak_type</span><span class="p">[</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">4</span>
+                <span class="n">nd_peak_type</span><span class="p">[</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">5</span>
+
+                <span class="n">peaks</span> <span class="o">=</span> <span class="n">initial_peaks_ecg</span>
+                <span class="n">peaks</span> <span class="o">+=</span> <span class="n">idx_peak_ids</span>
+                <span class="n">idx_peak_ids</span> <span class="o">+=</span> <span class="n">waveform</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+                <span class="n">initial_peaks_ecg_types</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nd_peak_type</span><span class="p">)</span>
+                <span class="n">cumulative_ecg_peaks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">peaks</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1">#print(&quot;missing points: &quot;, index)</span>
+                <span class="n">waveforms_with_error</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+
+                <span class="n">idx_peak_ids</span> <span class="o">+=</span> <span class="n">waveform</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+    <span class="k">if</span> <span class="n">get_bad_indexes</span><span class="p">:</span> <span class="k">return</span> <span class="n">cumulative_ecg_peaks</span><span class="p">,</span> <span class="n">initial_peaks_ecg_types</span><span class="p">,</span> <span class="n">waveforms_with_error</span>
+    <span class="k">else</span><span class="p">:</span> <span class="k">return</span> <span class="n">cumulative_ecg_peaks</span><span class="p">,</span> <span class="n">initial_peaks_ecg_types</span>
+
+
+
+<div class="viewcode-block" id="derive_ppg_signal_peaks">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.experimental.derive_ppg_signal_peaks">[docs]</a>
+<span class="k">def</span> <span class="nf">derive_ppg_signal_peaks</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">ppg_peaks</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">ppg_feets</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">window_length</span><span class="p">:</span><span class="nb">int</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">polyorder</span><span class="p">:</span><span class="nb">int</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Derive and categorize PPG signal peaks based on waveforms and peak types.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr</span>
+<span class="sd">        The PPG signal.</span>
+<span class="sd">    ppg_peaks</span>
+<span class="sd">        Indices of detected peaks in the PPG signal.</span>
+<span class="sd">    ppg_feets</span>
+<span class="sd">        Indices of calculated foot points.</span>
+<span class="sd">    window_length</span>
+<span class="sd">        Window length for the Savitzky-Golay filter, by default 9.</span>
+<span class="sd">    polyorder</span>
+<span class="sd">        Polynomial order for the Savitzky-Golay filter, by default 5.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    nd_ppg_with_peaks</span>
+<span class="sd">        1-D binary array indicating the presence of identified dicrotic and diastolic peaks in the PPG signal.</span>
+<span class="sd">    nd_ppg_with_peak_types</span>
+<span class="sd">        1-D array categorizing the identified dicrotic and diastolic peaks in the PPG signal:</span>
+<span class="sd">        - 1: feet</span>
+<span class="sd">        - 2: Systolic peak</span>
+<span class="sd">        - 3: Dicrotic notch</span>
+<span class="sd">        - 4: Diastolic peak</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    To find the r-peaks of ECG in a given signal:</span>
+
+<span class="sd">    .. plot::</span>
+<span class="sd">       :include-source:</span>
+
+<span class="sd">       from vitalwave.example_data import load_biosignal</span>
+<span class="sd">       import matplotlib.pyplot as plt</span>
+
+<span class="sd">       import numpy as np</span>
+
+<span class="sd">       limits = [0,2000]</span>
+<span class="sd">       time, ppg = load_biosignal(type=&quot;PPG&quot;)</span>
+
+<span class="sd">       fs = (1 / np.mean(np.diff(time)))</span>
+
+<span class="sd">       from src.vitalwave.experimental import derive_ppg_signal_peaks</span>
+<span class="sd">       from vitalwave.peak_detectors import msptd</span>
+
+<span class="sd">       ppg_signal = ppg</span>
+
+<span class="sd">       ppg_peaks, ppg_feets = msptd(ppg, fs=fs)</span>
+
+<span class="sd">       heights_peaks = ppg[ppg_peaks]</span>
+<span class="sd">       heights_feets = ppg[ppg_feets]</span>
+
+<span class="sd">       plt.figure(figsize=(10, 5))</span>
+<span class="sd">       plt.plot(ppg)</span>
+
+<span class="sd">       plt.scatter(ppg_peaks, heights_peaks, marker=&#39;o&#39;, color=&#39;green&#39;)</span>
+<span class="sd">       plt.scatter(ppg_feets, heights_feets, marker=&#39;o&#39;, color=&#39;red&#39;)</span>
+
+<span class="sd">       plt.show()</span>
+
+<span class="sd">       nd_ppg_with_peaks, nd_ppg_with_peak_types = derive_ppg_signal_peaks(arr=ppg,</span>
+<span class="sd">                                                                           ppg_peaks=ppg_peaks,</span>
+<span class="sd">                                                                           ppg_feets=ppg_feets,</span>
+<span class="sd">                                                                           window_length=9,</span>
+<span class="sd">                                                                           polyorder=5)</span>
+
+<span class="sd">       plt.figure(figsize=(10, 5))</span>
+<span class="sd">       plt.plot(ppg)</span>
+
+<span class="sd">       ecg_peaks = np.where(nd_ppg_with_peaks == 1.0)[0]</span>
+<span class="sd">       heights_peaks = ppg[ecg_peaks]</span>
+
+<span class="sd">       plt.scatter(ecg_peaks, heights_peaks, marker=&#39;o&#39;, color=&#39;green&#39;)</span>
+<span class="sd">       plt.scatter(ppg_feets, heights_feets, marker=&#39;o&#39;, color=&#39;red&#39;)</span>
+
+<span class="sd">       plt.show()</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Extract waveforms and initial peaks</span>
+    <span class="n">waveforms_ppg</span><span class="p">,</span> <span class="n">mean_waveform_ppg</span> <span class="o">=</span> <span class="n">basic_algos</span><span class="o">.</span><span class="n">extract_waveforms</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">ppg_feets</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;fid_to_fid&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Identify PPG peaks in waveforms</span>
+    <span class="n">cumulative_ppg_peaks</span><span class="p">,</span> <span class="n">initial_peaks_ppg_types</span><span class="p">,</span> <span class="n">problems</span> <span class="o">=</span> <span class="n">_identify_ppg_peaks_in_waveform</span><span class="p">(</span><span class="n">waveforms_ppg</span><span class="p">,</span>
+                                                                                              <span class="n">window_length</span><span class="o">=</span><span class="n">window_length</span><span class="p">,</span>
+                                                                                              <span class="n">polyorder</span><span class="o">=</span><span class="n">polyorder</span><span class="p">)</span>
+
+    <span class="c1"># Process identified peaks and types</span>
+    <span class="n">ppg_signal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">waveforms_ppg</span><span class="p">)</span>
+    <span class="n">ppg_signal</span> <span class="o">=</span> <span class="n">ppg_signal</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">ppg_signal</span><span class="p">)]</span>
+
+    <span class="n">ppg_peaks_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">cumulative_ppg_peaks</span><span class="p">)</span>
+    <span class="n">ppg_peaks_all_types</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">initial_peaks_ppg_types</span><span class="p">)</span>
+
+    <span class="n">nd_ppg_with_peak_types</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">ppg_signal</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">peak</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ppg_peaks_all</span><span class="p">):</span>
+        <span class="n">nd_ppg_with_peak_types</span><span class="p">[</span><span class="n">peak</span><span class="p">]</span> <span class="o">=</span> <span class="n">ppg_peaks_all_types</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+
+    <span class="c1"># Find dicrotic and diastolic points and adjust the ppg-signal to fit using window based approach</span>
+    <span class="n">d2x</span> <span class="o">=</span> <span class="n">savgol_filter</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">window_length</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">polyorder</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">deriv</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">systolic_peaks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">ppg_peaks</span><span class="p">,</span> <span class="n">problems</span><span class="p">)</span>
+
+    <span class="n">dicrotic</span> <span class="o">=</span> <span class="n">systolic_peaks</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">nd_ppg_with_peak_types</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">nd_ppg_with_peak_types</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">diastolic</span> <span class="o">=</span> <span class="n">systolic_peaks</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">nd_ppg_with_peak_types</span> <span class="o">==</span> <span class="mi">3</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">nd_ppg_with_peak_types</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="n">nd_ppg_with_peaks</span><span class="p">,</span> <span class="n">nd_ppg_with_peak_types</span> <span class="o">=</span> <span class="n">_find_dicrotic_and_diastolic</span><span class="p">(</span><span class="n">d2x_arr</span><span class="o">=</span><span class="n">d2x</span><span class="p">,</span>
+                                                                             <span class="n">feets</span><span class="o">=</span><span class="n">ppg_feets</span><span class="p">,</span>
+                                                                             <span class="n">systolic</span><span class="o">=</span><span class="n">systolic_peaks</span><span class="p">,</span>
+                                                                             <span class="n">dicrotic</span><span class="o">=</span><span class="n">dicrotic</span><span class="p">,</span>
+                                                                             <span class="n">diastolic</span><span class="o">=</span><span class="n">diastolic</span><span class="p">,</span>
+                                                                             <span class="n">window</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">nd_ppg_with_peaks</span><span class="p">,</span> <span class="n">nd_ppg_with_peak_types</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">_find_dicrotic_and_diastolic</span><span class="p">(</span><span class="n">d2x_arr</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">feets</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">systolic</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                                 <span class="n">dicrotic</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">diastolic</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span><span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Identify and categorize dicrotic and diastolic points based on second derivative of the signal.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    d2x_arr</span>
+<span class="sd">        Second derivative of the signal.</span>
+<span class="sd">    feets</span>
+<span class="sd">        Indices representing foot points of the signal.</span>
+<span class="sd">    systolic</span>
+<span class="sd">        Indices representing systolic points of the signal.</span>
+<span class="sd">    dicrotic</span>
+<span class="sd">        Indices representing dicrotic points of the signal.</span>
+<span class="sd">    diastolic</span>
+<span class="sd">        Indices representing diastolic points of the signal.</span>
+<span class="sd">    window</span>
+<span class="sd">        Half-width of the window for peak identification, by default 4.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    nd_ecg_with_peaks : numpy.ndarray</span>
+<span class="sd">        Array with peaks marked as 1.</span>
+<span class="sd">    nd_ecg_with_peak_types : numpy.ndarray</span>
+<span class="sd">        Array with peak types marked as 1, 2, 3, or 4.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">nd_ecg_with_peaks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">d2x_arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">nd_ecg_with_peak_types</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">d2x_arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">syst</span><span class="p">,</span> <span class="n">dic</span><span class="p">,</span> <span class="n">dia</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span> <span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">feets</span><span class="p">,</span> <span class="n">systolic</span><span class="p">,</span> <span class="n">dicrotic</span><span class="p">,</span> <span class="n">diastolic</span><span class="p">)):</span>
+
+        <span class="n">nd_ecg_with_peaks</span><span class="p">[(</span><span class="n">f</span> <span class="o">-</span> <span class="n">window</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">d2x_arr</span><span class="p">[(</span><span class="n">f</span> <span class="o">-</span> <span class="n">window</span><span class="p">):(</span><span class="n">f</span> <span class="o">+</span> <span class="n">window</span><span class="p">)]))]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">nd_ecg_with_peak_types</span><span class="p">[(</span><span class="n">f</span> <span class="o">-</span> <span class="n">window</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">d2x_arr</span><span class="p">[(</span><span class="n">f</span> <span class="o">-</span> <span class="n">window</span><span class="p">):(</span><span class="n">f</span> <span class="o">+</span> <span class="n">window</span><span class="p">)]))]</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="n">nd_ecg_with_peaks</span><span class="p">[(</span><span class="n">syst</span><span class="o">-</span><span class="n">window</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">d2x_arr</span><span class="p">[(</span><span class="n">syst</span> <span class="o">-</span> <span class="n">window</span><span class="p">):(</span><span class="n">syst</span> <span class="o">+</span> <span class="n">window</span><span class="p">)]))]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">nd_ecg_with_peak_types</span><span class="p">[(</span><span class="n">syst</span><span class="o">-</span><span class="n">window</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">d2x_arr</span><span class="p">[(</span><span class="n">syst</span> <span class="o">-</span> <span class="n">window</span><span class="p">):(</span><span class="n">syst</span> <span class="o">+</span> <span class="n">window</span><span class="p">)]))]</span> <span class="o">=</span> <span class="mi">2</span>
+
+        <span class="n">nd_ecg_with_peaks</span><span class="p">[(</span><span class="n">dic</span><span class="o">-</span><span class="n">window</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">d2x_arr</span><span class="p">[(</span><span class="n">dic</span> <span class="o">-</span> <span class="n">window</span><span class="p">):(</span><span class="n">dic</span> <span class="o">+</span> <span class="n">window</span><span class="p">)]))]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">nd_ecg_with_peak_types</span><span class="p">[(</span><span class="n">dic</span><span class="o">-</span><span class="n">window</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">d2x_arr</span><span class="p">[(</span><span class="n">dic</span> <span class="o">-</span> <span class="n">window</span><span class="p">):(</span><span class="n">dic</span> <span class="o">+</span> <span class="n">window</span><span class="p">)]))]</span> <span class="o">=</span> <span class="mi">3</span>
+
+        <span class="n">nd_ecg_with_peaks</span><span class="p">[(</span><span class="n">dia</span><span class="o">-</span><span class="n">window</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">d2x_arr</span><span class="p">[(</span><span class="n">dia</span> <span class="o">-</span> <span class="n">window</span><span class="p">):(</span><span class="n">dia</span> <span class="o">+</span> <span class="n">window</span><span class="p">)]))]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">nd_ecg_with_peak_types</span><span class="p">[(</span><span class="n">dia</span><span class="o">-</span><span class="n">window</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">d2x_arr</span><span class="p">[(</span><span class="n">dia</span> <span class="o">-</span> <span class="n">window</span><span class="p">):(</span><span class="n">dia</span> <span class="o">+</span> <span class="n">window</span><span class="p">)]))]</span> <span class="o">=</span> <span class="mi">4</span>
+
+    <span class="k">return</span> <span class="n">nd_ecg_with_peaks</span><span class="p">,</span> <span class="n">nd_ecg_with_peak_types</span>
+
+
+<span class="k">def</span> <span class="nf">_identify_ppg_peaks_in_waveform</span><span class="p">(</span><span class="n">waveforms_ppg</span><span class="p">,</span> <span class="n">window_length</span><span class="p">:</span><span class="nb">int</span> <span class="o">=</span> <span class="mi">9</span><span class="p">,</span> <span class="n">polyorder</span><span class="p">:</span><span class="nb">int</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Identify and categorize PPG signal peaks in waveforms.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    waveforms_ppg : list of numpy.ndarray</span>
+<span class="sd">        List of PPG waveforms for peak identification.</span>
+<span class="sd">    window_length</span>
+<span class="sd">        Window length for the Savitzky-Golay filter, by default 9.</span>
+<span class="sd">    polyorder</span>
+<span class="sd">        Polynomial order for the Savitzky-Golay filter, due to the twin-peak structure of the waveform, the correct order is 5</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    cumulative_ppg_peaks : list of numpy.ndarray</span>
+<span class="sd">        List of cumulative peak locations for all waveforms, categorized by types.</span>
+<span class="sd">    initial_peaks_ppg_types : list of numpy.ndarray</span>
+<span class="sd">        List of peak type categorizations corresponding to initial_peaks_ppg.</span>
+<span class="sd">    problems : list of int</span>
+<span class="sd">        List of indexes of waveforms where peak identification encountered issues.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">idx_peak_ids</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">real_index</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">initial_peaks_ppg_3</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">initial_peaks_ppg_types</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">cumulative_ppg_peaks</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">problems</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">waveform</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">waveforms_ppg</span><span class="p">):</span>
+        <span class="n">waveform</span> <span class="o">=</span> <span class="n">waveform</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">waveform</span><span class="p">)]</span>
+
+        <span class="n">p_1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">waveform</span><span class="p">)</span>
+        <span class="n">p_2</span> <span class="o">=</span> <span class="n">p_1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">waveform</span><span class="p">[</span><span class="n">p_1</span><span class="p">:])</span>
+
+        <span class="n">peaks_ecg_high</span> <span class="o">=</span> <span class="n">argrelextrema</span><span class="p">(</span><span class="n">waveform</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">greater</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">peaks_ecg_low</span> <span class="o">=</span> <span class="n">argrelextrema</span><span class="p">(</span><span class="n">waveform</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">less</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">initial_peaks_ppg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">peaks_ecg_high</span><span class="p">,</span> <span class="n">peaks_ecg_low</span><span class="p">)))</span>
+
+        <span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">initial_peaks_ppg</span><span class="p">)</span> <span class="o">-</span> <span class="n">p_1</span><span class="p">))</span><span class="o">.</span><span class="n">argmin</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">initial_peaks_ppg</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="c1"># Three peaks found</span>
+            <span class="n">initial_peaks_ppg_3</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">initial_peaks_ppg</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">initial_peaks_ppg</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># main peak found; two peaks derived</span>
+            <span class="n">d2x</span> <span class="o">=</span> <span class="n">savgol_filter</span><span class="p">(</span><span class="n">waveform</span><span class="p">,</span> <span class="n">window_length</span><span class="o">=</span><span class="n">window_length</span><span class="p">,</span> <span class="n">polyorder</span><span class="o">=</span><span class="n">polyorder</span><span class="p">,</span> <span class="n">deriv</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">diastolic</span><span class="p">,</span> <span class="n">dicrotic</span> <span class="o">=</span> <span class="n">_get_diastolic_dicrotic_points</span><span class="p">(</span><span class="n">arr</span><span class="o">=</span><span class="n">d2x</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">p_1</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="n">p_2</span><span class="p">)</span>
+
+            <span class="n">initial_peaks_ppg_3</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">p_1</span><span class="p">,</span> <span class="n">dicrotic</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">diastolic</span><span class="o">.</span><span class="n">item</span><span class="p">()]))</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">idx_peak_ids</span> <span class="o">+=</span> <span class="n">waveform</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="n">problems</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+            <span class="k">continue</span>
+
+        <span class="n">index</span> <span class="o">=</span> <span class="n">real_index</span>
+
+        <span class="n">nd_peak_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">initial_peaks_ppg_3</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+        <span class="n">nd_peak_type</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">nd_peak_type</span><span class="p">[</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="n">nd_peak_type</span><span class="p">[</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">3</span>
+
+        <span class="n">peaks</span> <span class="o">=</span> <span class="n">initial_peaks_ppg_3</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+        <span class="n">peaks</span> <span class="o">+=</span> <span class="n">idx_peak_ids</span>
+        <span class="n">idx_peak_ids</span> <span class="o">+=</span> <span class="n">waveform</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">initial_peaks_ppg_types</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nd_peak_type</span><span class="p">)</span>
+        <span class="n">cumulative_ppg_peaks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">peaks</span><span class="p">)</span>
+
+        <span class="n">real_index</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="k">return</span> <span class="n">cumulative_ppg_peaks</span><span class="p">,</span> <span class="n">initial_peaks_ppg_types</span><span class="p">,</span> <span class="n">problems</span>
+
+
+<span class="k">def</span> <span class="nf">_get_diastolic_dicrotic_points</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate diastolic (dia) and dicrotic (dic) indices based on PPG signal, peak indices, and onset indices.</span>
+
+<span class="sd">    if only the systolic peak is found; the key steps selected to find the dicrotic and diastolic peaks are:</span>
+
+<span class="sd">    * Start from a second-order-derivative of The PPG signal; from the waveform arg_max to the waveform argmin</span>
+<span class="sd">    * isolate peaks between positive and negative highs; dicrotic signal is found from the positive-highs</span>
+<span class="sd">    * Find the index of the maximum peak in the dicrotic region and find the nearest diastolic peak</span>
+<span class="sd">    * return a set of index:s for diastolic and dicrotic</span>
+
+<span class="sd">    Article to reference</span>
+
+<span class="sd">    * https://www.frontiersin.org/articles/10.3389/fbioe.2023.1199604/full</span>
+
+<span class="sd">    Savitzky-Golay - used to calculating the derivatives</span>
+
+<span class="sd">    * https://eigenvector.com/wp-content/uploads/2020/01/SavitzkyGolay.pdf</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        arr:</span>
+<span class="sd">            Second order of derivative of The PPG signal.</span>
+<span class="sd">        start:</span>
+<span class="sd">            main peak of the PPG signal</span>
+<span class="sd">        stop:</span>
+<span class="sd">            local minimum at the end of the waveform .</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Indices representing diastolic points.</span>
+<span class="sd">        Indices representing dicrotic points.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Extract the relevant portion of the signal</span>
+    <span class="n">signal_portion</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]</span>
+
+    <span class="c1"># isolate between positive and negative highs</span>
+    <span class="n">aux_dic</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">find_peaks</span><span class="p">(</span><span class="n">signal_portion</span><span class="p">)</span>
+    <span class="n">aux_dia</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">find_peaks</span><span class="p">(</span><span class="o">-</span><span class="n">signal_portion</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">aux_dic</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+
+        <span class="c1"># Find the index of the maximum peak in the dicrotic region</span>
+        <span class="n">ind_max</span><span class="p">,</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">signal_portion</span><span class="p">[</span><span class="n">aux_dic</span><span class="p">]</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">signal_portion</span><span class="p">[</span><span class="n">aux_dic</span><span class="p">]))</span>
+        <span class="n">aux_dic_max</span> <span class="o">=</span> <span class="n">aux_dic</span><span class="p">[</span><span class="n">ind_max</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">aux_dia</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+
+            <span class="c1"># Calculate distances between dicrotic and diastolic peaks</span>
+            <span class="n">nearest</span> <span class="o">=</span> <span class="n">aux_dia</span> <span class="o">-</span> <span class="n">aux_dic_max</span>
+            <span class="n">aux_dic</span> <span class="o">=</span> <span class="n">aux_dic_max</span>
+            <span class="n">dicrotic</span> <span class="o">=</span> <span class="p">(</span><span class="n">aux_dic</span> <span class="o">+</span> <span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+            <span class="n">ind_dia</span><span class="p">,</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">nearest</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">aux_dia</span> <span class="o">=</span> <span class="n">aux_dia</span><span class="p">[</span><span class="n">ind_dia</span><span class="p">]</span>
+            <span class="n">nearest</span> <span class="o">=</span> <span class="n">nearest</span><span class="p">[</span><span class="n">ind_dia</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">nearest</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+
+                <span class="c1"># Find the nearest diastolic peak</span>
+                <span class="n">ind_nearest</span><span class="p">,</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">nearest</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">nearest</span><span class="p">))</span>
+                <span class="n">aux_dia</span> <span class="o">=</span> <span class="n">aux_dia</span><span class="p">[</span><span class="n">ind_nearest</span><span class="p">]</span>
+                <span class="n">diastolic</span> <span class="o">=</span> <span class="p">(</span><span class="n">aux_dia</span> <span class="o">+</span> <span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">dicrotic</span> <span class="o">=</span> <span class="p">(</span><span class="n">aux_dic_max</span> <span class="o">+</span> <span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">diastolic</span><span class="p">,</span> <span class="n">dicrotic</span>
+
+
+<div class="viewcode-block" id="do_ppg_from_raw_signal">
+<a class="viewcode-back" href="../../../src.vitalwave.html#src.vitalwave.experimental.do_ppg_from_raw_signal">[docs]</a>
+<span class="k">def</span> <span class="nf">do_ppg_from_raw_signal</span><span class="p">(</span><span class="n">arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">signal_integration_window</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                           <span class="n">segment</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="n">return_as_segment</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Process PPG data from raw signals, segmenting and detecting anomalies.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr : np.ndarray</span>
+<span class="sd">        Raw PPG signal.</span>
+
+<span class="sd">    fs : float</span>
+<span class="sd">        Sampling frequency.</span>
+
+<span class="sd">    signal_integration_window : float, optional</span>
+<span class="sd">        Integration window size (default is 0).</span>
+<span class="sd">        If greater than 0, the function will perform area under the curve integration.</span>
+
+<span class="sd">    segment : int, optional</span>
+<span class="sd">        Number of segments to divide the signal into (default is 2).</span>
+<span class="sd">        If set to 0, the function will process the entire array as a single segment.</span>
+
+<span class="sd">    threshold : float, optional</span>
+<span class="sd">        Threshold for anomaly detection (default is 2).</span>
+<span class="sd">        Anomalies are detected based on the differences between consecutive peaks.</span>
+<span class="sd">        Peaks with differences greater than this threshold are considered anomalies.</span>
+
+<span class="sd">    return_as_segment : bool, optional</span>
+<span class="sd">        If False (default), returns a single array with segments (or the complete signal)</span>
+<span class="sd">        without anomalies.</span>
+<span class="sd">        If True, returns individual segments along with any detected anomalies.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ppg signal : list of np.ndarray</span>
+<span class="sd">        Segmented or complete PPG signal.</span>
+
+<span class="sd">    peaks_all : list of np.ndarray</span>
+<span class="sd">        Detected peaks.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    To preprocess, validate, and find the peaks or valleys in a ppg signal:</span>
+
+<span class="sd">    .. plot::</span>
+<span class="sd">       :include-source:</span>
+
+<span class="sd">       from vitalwave.example_data import load_biosignal</span>
+<span class="sd">       import matplotlib.pyplot as plt</span>
+
+<span class="sd">       import numpy as np</span>
+
+<span class="sd">       limits = [0,2000]</span>
+<span class="sd">       time, ppg = load_biosignal(type=&quot;PPG&quot;)</span>
+
+<span class="sd">       fs = (1 / np.mean(np.diff(time)))</span>
+
+<span class="sd">       from vitalwave.experimental import do_ppg_from_raw_signal</span>
+
+<span class="sd">       ppg_data_all, peak_indices_all = do_ppg_from_raw_signal(arr=ppg, fs=fs, segment=6, threshold=3,</span>
+<span class="sd">                                                               return_as_segment=False)</span>
+<span class="sd">       heights_peaks_all = ppg_data_all[peak_indices_all]</span>
+
+<span class="sd">       ppg_data, peak_indices = do_ppg_from_raw_signal(arr=ppg, fs=fs, segment=3, threshold=3,</span>
+<span class="sd">                                                       return_as_segment=True)</span>
+<span class="sd">       heights_peaks = ppg_data[0][peak_indices[0]]</span>
+
+<span class="sd">       fig, axes = plt.subplots(2, 1, figsize=(10, 8))</span>
+
+<span class="sd">       axes[0].plot(ppg_data_all)</span>
+<span class="sd">       axes[0].scatter(peak_indices_all, heights_peaks_all, marker=&#39;o&#39;, color=&#39;green&#39;)</span>
+<span class="sd">       axes[0].set_title(&quot;PPG Data as complete (Segment = 3)&quot;)</span>
+
+<span class="sd">       axes[1].plot(ppg_data[0])</span>
+<span class="sd">       axes[1].scatter(peak_indices[0], heights_peaks, marker=&#39;o&#39;, color=&#39;green&#39;)</span>
+<span class="sd">       axes[1].set_title(&quot;PPG Data as segments (Segment = 6)&quot;)</span>
+
+<span class="sd">       plt.tight_layout()</span>
+
+<span class="sd">       plt.show()</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    If segmentation is enabled (segment &gt; 0), the function divides the signal into multiple</span>
+<span class="sd">    segments and detects peaks within each segment. Anomalies are detected based on the</span>
+<span class="sd">    differences between consecutive peak indices. Segments without anomalies are returned.</span>
+
+<span class="sd">    If segmentation is disabled (segment = 0), the entire input signal is processed as a</span>
+<span class="sd">    single segment.</span>
+
+<span class="sd">    ppg_data, peak_indices = do_ppg_from_raw_signal(arr = nd_ppg[&quot;ppg_1_ir&quot;], fs = fs, segment = 6,</span>
+<span class="sd">                                                    threshold = 3, return_as_segment=True)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># to allow for segmented and non segmented signal</span>
+    <span class="n">idx_segment_ids</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">segments</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">peaks_all</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># pre-filter</span>
+    <span class="n">ppg_filtered</span> <span class="o">=</span> <span class="p">[</span><span class="n">basic_algos</span><span class="o">.</span><span class="n">min_max_normalize</span><span class="p">(</span><span class="n">basic_algos</span><span class="o">.</span><span class="n">butter_filter</span><span class="p">(</span><span class="n">arr</span><span class="o">=</span><span class="n">arr</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">wn</span><span class="o">=</span><span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mi">8</span><span class="p">],</span>
+                                                                            <span class="n">filter_type</span><span class="o">=</span><span class="s1">&#39;bandpass&#39;</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">fs</span><span class="p">)))]</span>
+
+    <span class="c1"># make an area under the curve / volumetric</span>
+    <span class="k">if</span> <span class="n">signal_integration_window</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">ppg_filtered</span> <span class="o">=</span> <span class="n">basic_algos</span><span class="o">.</span><span class="n">moving_average_filter</span><span class="p">(</span><span class="n">arr</span><span class="o">=</span><span class="n">ppg_filtered</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                                         <span class="n">window</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">signal_integration_window</span><span class="p">),</span>
+                                                         <span class="nb">type</span> <span class="o">=</span> <span class="s2">&quot;triang&quot;</span><span class="p">)</span>
+
+    <span class="c1"># segment the signal / using np.split causes an error unless the split is not even</span>
+    <span class="k">if</span> <span class="n">segment</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">segment_length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ppg_filtered</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">//</span> <span class="n">segment</span> <span class="o">*</span> <span class="n">segment</span>
+        <span class="n">ppg_filtered</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">ppg_filtered</span><span class="p">[</span><span class="mi">0</span><span class="p">][:</span><span class="n">segment_length</span><span class="p">],</span> <span class="n">segment</span><span class="p">)</span>
+
+
+    <span class="c1"># here single segment and multiple segments are processed within the same process.</span>
+    <span class="k">for</span> <span class="n">ppg_segment</span> <span class="ow">in</span> <span class="n">ppg_filtered</span><span class="p">:</span>
+        <span class="n">feet_2_ppg</span> <span class="o">=</span> <span class="n">ampd</span><span class="p">(</span><span class="o">-</span><span class="n">ppg_segment</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">fs</span><span class="p">))</span>
+        <span class="n">peaks_2_ppg</span> <span class="o">=</span> <span class="n">ampd</span><span class="p">(</span><span class="n">ppg_segment</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">fs</span><span class="p">))</span>
+
+        <span class="n">initial_peaks_ppg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">feet_2_ppg</span><span class="p">,</span> <span class="n">peaks_2_ppg</span><span class="p">)))</span>
+        <span class="n">initial_peaks_ppg</span> <span class="o">+=</span> <span class="n">idx_segment_ids</span>
+
+        <span class="n">idx_segment_ids</span> <span class="o">+=</span> <span class="n">ppg_segment</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">min_length</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">feet_2_ppg</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">peaks_2_ppg</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">difference</span> <span class="o">=</span> <span class="n">feet_2_ppg</span><span class="p">[:</span><span class="n">min_length</span><span class="p">]</span> <span class="o">-</span> <span class="n">peaks_2_ppg</span><span class="p">[:</span><span class="n">min_length</span><span class="p">]</span>
+
+        <span class="n">outliers</span> <span class="o">=</span> <span class="n">_has_gap_between_segments</span><span class="p">(</span><span class="n">difference</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">outliers</span><span class="o">.</span><span class="fm">__len__</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">segments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ppg_segment</span><span class="p">)</span>
+            <span class="n">peaks_all</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">initial_peaks_ppg</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">segment</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">ppg_segment</span><span class="p">,</span> <span class="n">outliers</span>
+
+    <span class="c1"># also check the completed signal, here the peak detection is re-iterated with the passing signal.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">return_as_segment</span><span class="p">:</span>
+        <span class="n">ppg_segments_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">segments</span><span class="p">)</span>
+
+        <span class="n">feet_2_ppg_all</span> <span class="o">=</span> <span class="n">ampd</span><span class="p">(</span><span class="o">-</span><span class="n">ppg_segments_all</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">fs</span><span class="p">))</span>
+        <span class="n">peaks_2_ppg_all</span> <span class="o">=</span> <span class="n">ampd</span><span class="p">(</span><span class="n">ppg_segments_all</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">fs</span><span class="p">))</span>
+
+        <span class="n">min_length</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">feet_2_ppg_all</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">peaks_2_ppg_all</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">differences</span> <span class="o">=</span> <span class="n">feet_2_ppg_all</span><span class="p">[:</span><span class="n">min_length</span><span class="p">]</span> <span class="o">-</span> <span class="n">peaks_2_ppg_all</span><span class="p">[:</span><span class="n">min_length</span><span class="p">]</span>
+
+        <span class="n">outliers</span> <span class="o">=</span> <span class="n">_has_gap_between_segments</span><span class="p">(</span><span class="n">differences</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">outliers</span><span class="o">.</span><span class="fm">__len__</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">peaks_ppg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">feet_2_ppg_all</span><span class="p">,</span> <span class="n">peaks_2_ppg_all</span><span class="p">)))</span>
+            <span class="k">return</span> <span class="n">ppg_segments_all</span><span class="p">,</span> <span class="n">peaks_ppg</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">ppg_segments_all</span><span class="p">,</span> <span class="n">outliers</span>
+
+    <span class="k">return</span> <span class="n">segments</span><span class="p">,</span> <span class="n">peaks_all</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">_has_gap_between_segments</span><span class="p">(</span><span class="n">difference_values</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span><span class="nb">float</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Detect anomalies based on actionable difference value based metric.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    difference_values : np.ndarray</span>
+<span class="sd">        Array of differences between PPG cycle feet and peaks.</span>
+
+<span class="sd">    threshold</span>
+<span class="sd">        Threshold for anomaly detection (default is 2).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    outliers</span>
+<span class="sd">        Indexes of potential outliers.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">q1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">difference_values</span><span class="p">,</span> <span class="mi">25</span><span class="p">)</span>
+    <span class="n">q3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">difference_values</span><span class="p">,</span> <span class="mi">75</span><span class="p">)</span>
+
+    <span class="n">iqr</span> <span class="o">=</span> <span class="n">q3</span> <span class="o">-</span> <span class="n">q1</span>
+
+    <span class="n">lower_bound</span> <span class="o">=</span> <span class="n">q1</span> <span class="o">-</span> <span class="p">(</span><span class="n">iqr</span> <span class="o">*</span> <span class="n">threshold</span><span class="p">)</span>
+    <span class="n">upper_bound</span> <span class="o">=</span> <span class="n">q3</span> <span class="o">+</span> <span class="p">(</span><span class="n">iqr</span> <span class="o">*</span> <span class="n">threshold</span><span class="p">)</span>
+
+    <span class="c1"># derive coefficient and do min threshold + coef * 1</span>
+    <span class="n">outliers</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">difference_values</span><span class="p">)</span> <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="n">lower_bound</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="n">upper_bound</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">outliers</span>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, MW.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
