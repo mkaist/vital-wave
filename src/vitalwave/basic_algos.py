@@ -238,6 +238,7 @@ def moving_average_filter(arr: np.ndarray, window: int, type = "triang") -> np.n
 
     return data
 
+#NEEDS TO BE CHECKED
 def wavelet_transform_signal(arr: np.ndarray, dwt_transform, dlevels, cutoff_low, cutoff_high):
     """
     Designed to work with noisy signal as a first-pass mechanism.
@@ -530,6 +531,67 @@ def filter_hr(heart_rates: np.ndarray, kernel_size: int=7,
     heart_rates[~idxs] = np.nan
 
     return heart_rates
+
+import numpy as np
+from scipy import signal
+
+
+#THIS IS ESSENTAILLY SAME AS ABOVE, ONLY SIMPLE sdsd THRS IS ADDED, WE CAN SIMPLY PUT THIS PART INTO ABOVE WITH A BOOLEN ARG, DEFAULT NOT USE
+def filter_hr_peaks(peaks, fs=fs, hr_min=40, hr_max=200, kernel_size=7, sdsd_max=0.35):
+    """
+    Filters peaks detected in PPG or ECG data to identify and exclude unreliable heart rate (HR) readings based on 
+    the variability of R-R intervals. It applies a median filter to smooth the HR signal and uses the Standard Deviation
+    of Successive Differences (SDSD) to exclude intervals with high variability.
+
+    Parameters:
+        peaks (array): Array of detected peaks' indices in the signal.
+        fs (int): Sampling frequency of the signal.
+        hr_min (int): Minimum allowable heart rate value in BPM.
+        hr_max (int): Maximum allowable heart rate value in BPM.
+        kernel_size (int): Size of the kernel used for median filtering.
+        sdsd_max (float): Maximum allowable SDSD. Peaks resulting in a higher SDSD will be excluded.
+
+    Returns:
+        np.array: An array of valid peak indices after filtering.
+        float: The mean heart rate computed from the valid R-R intervals.
+    """
+    
+    # Calculate R-R intervals in samples
+    rri_s = np.diff(peaks)
+    # Convert R-R intervals into seconds
+    rri = rri_s / fs
+    # Calculate heart rate from R-R intervals
+    hr = 60 / rri
+    # Apply median filter to the heart rate signal to smooth it
+    hr_med = signal.medfilt(hr, kernel_size)
+    # Calculate the SDSD for the R-R intervals
+    rr_diff = np.diff(rri)
+    sdsd = np.std(rr_diff)
+
+    #ONLY THIS SIMPE THRS PART SEEMS TO BE NEW, OTHERWISE ALREADY INCLUDED IN ABOVE FUNCTION 
+    # Check if SDSD exceeds the acceptable maximum, if so return empty array and NaN
+    if sdsd_max is not None and sdsd > sdsd_max:
+        return np.array([]), np.nan
+  
+    # Create a mask for heart rate values within the specified range
+    valid_hr_mask = (hr_med >= hr_min) & (hr_med <= hr_max)
+    # Select valid R-R intervals
+    valid_rri = rri[valid_hr_mask]
+    # Calculate the mean heart rate from valid R-R intervals
+    valid_hr_mean = 60 / np.mean(valid_rri)
+    # Initialize valid peaks list with the first peak
+    valid_peaks = [peaks[0]]
+    # Calculate cumulative sum to find the valid peak indices # JUST USE CUMSUM
+    cumulative_sum = peaks[0]
+    for i in range(len(valid_rri)):
+        cumulative_sum += valid_rri[i] * fs
+        valid_peaks.append(int(cumulative_sum))
+    
+    # Return the array of valid peak indices and the mean heart rate
+    return np.array(valid_peaks), valid_hr_mean
+
+
+
 
 def homomorphic_hilbert_envelope(arr:np.ndarray, fs:int, order:int = 1, cutoff_fz:int = 8) -> np.ndarray:
     """
