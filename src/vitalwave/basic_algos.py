@@ -320,6 +320,12 @@ def wavelet_transform_signal(arr: np.ndarray, dwt_transform, dlevels, cutoff_low
     wavelet_trans = waverec(coeffs, dwt_transform)
     return wavelet_trans
 
+
+#window method does not allow assymteric case
+#the window needs to be odd, not good
+#example code has some weird make odd nonsense
+#lets add method yang-yang has been using
+
 def extract_waveforms(arr: np.ndarray, fid_points: np.ndarray, 
                       mode: str, window: int=None) -> tuple[np.ndarray, np.ndarray]:
     """
