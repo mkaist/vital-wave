@@ -543,7 +543,7 @@ from scipy import signal
 
 
 #THIS IS ESSENTAILLY SAME AS ABOVE, ONLY SIMPLE sdsd THRS IS ADDED, WE CAN SIMPLY PUT THIS PART INTO ABOVE WITH A BOOLEN ARG, DEFAULT NOT USE
-def filter_hr_peaks(peaks, fs=fs, hr_min=40, hr_max=200, kernel_size=7, sdsd_max=0.35):
+def filter_hr_peaks(peaks, fs:int, hr_min=40, hr_max=200, kernel_size=7, sdsd_max=0.35):
     """
     Filters peaks detected in PPG or ECG data to identify and exclude unreliable heart rate (HR) readings based on 
     the variability of R-R intervals. It applies a median filter to smooth the HR signal and uses the Standard Deviation
