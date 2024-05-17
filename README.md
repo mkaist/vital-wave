@@ -82,14 +82,12 @@ The syntax to running the code is, from vitalwave import:
 ## to do
 
 This is the working document for the Project.
-
-- [x] feature moduuli - working
-- [x] refaktorointi --> publish - working
-
-for future
-- [x] quality indices - working
-- [x] statistical outliers -done
-- [ ] respiration algot
-- [x] activity algot
-- [x] segmentation 
+- check quality indices
+- check feature moduuli
+- refaktorointi + test notebooks + checking fix comments in the code
+- augmentation module
+- time series outlier removals 
+- respiration algot
+- activity algot/models?
+- segmentation?
 
