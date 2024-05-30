@@ -7,7 +7,7 @@ from scipy.signal import find_peaks, detrend, windows
 
 import copy
 
-
+#MAKE L = 2*fs ALWAYS IN ALL METHODS
 def ampd(arr: np.ndarray, fs: int=None) -> np.ndarray:
     """
     Automatic multiscale-based peak detection (AMPD).
